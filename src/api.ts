@@ -9,24 +9,31 @@ import {
     IPlanInput,
     ISDKResponse,
 } from './types';
+import { HttpError } from './utils';
 
 export class CyanAPI {
     private fetchData: (p: string, o?: RequestInit) => Promise<any>;
 
     constructor(apiKey: string, host: string) {
         this.fetchData = async (path: string, options?: RequestInit) => {
-            const url = new URL(path, host).toString();
-            const res = await fetch(url, {
-                headers: {
-                    'X-API-KEY': apiKey,
-                    'content-type': 'application/json',
-                },
-                ...options,
-            });
-            if (!res.ok) {
-                throw new Error(res.statusText);
+            try {
+                const url = new URL(path, host).toString();
+                const res = await fetch(url, {
+                    headers: {
+                        'X-API-KEY': apiKey,
+                        'content-type': 'application/json',
+                    },
+                    ...options,
+                });
+                if (!res.ok) {
+                    const error = await res.json();
+                    const err = new HttpError(error.message, res.status);
+                    return Promise.reject(err);
+                }
+                return res.json();
+            } catch (error) {
+                throw error;
             }
-            return res.json();
         };
     }
 

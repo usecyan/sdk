@@ -466,9 +466,9 @@
   integrity sha512-hppQEBDmlwhFAXKJX2KnWLYu5yMfi91yazPb2l+lbJiwW+wdo1gNeRA+3RgNSO39WYX2euey41KEwnqesU2Jew==
 
 "@usecyan/sdk@^0.1.0":
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/@usecyan/sdk/-/sdk-0.1.0.tgz#d592bdf447b6f202f811b825df75c12caacce0a8"
-  integrity sha512-TJMoj1ystSygh1IUwNv5yC7s/L0Jrh7KUDqFOEP4Mg2RtA3aJAbb5lv4ASPJP1dZtUsi7qm24QMlOam7f0n4mw==
+  version "0.1.2"
+  resolved "https://registry.yarnpkg.com/@usecyan/sdk/-/sdk-0.1.2.tgz#121d5655a961e4e8b6185c73d6d157e5a58c8325"
+  integrity sha512-/sZAS8DDsLU3al1yMTtgYhNUmDvA3pJFZAbWxCgSrHHsyzEZyTDeqiloZ+tqsR5p+R4nDkSAx4BedIN7rypBdA==
   dependencies:
     ethers "^5.6.9"
     isomorphic-unfetch "^3.1.0"
