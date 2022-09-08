@@ -38,12 +38,17 @@ export const CreatePawn = React.memo(({ provider, cyan }: { provider: ethers.pro
     };
 
     const handleGetApproval = async () => {
-        setLoading(true);
-        const approval = await cyan.getApproval(address, appraisal);
-        console.log('Pawn Approval:', approval);
-        setApproved(true);
-        setMessage(approval.hash);
-        setLoading(false);
+        try {
+            setLoading(true);
+            const approval = await cyan.getApproval(address, appraisal);
+            console.log('Pawn Approval:', approval);
+            setApproved(true);
+            setMessage(approval.hash);
+        } catch (e) {
+            console.log(e);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleCreatePawn = async () => {

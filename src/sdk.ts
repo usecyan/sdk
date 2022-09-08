@@ -189,7 +189,12 @@ export class CyanSDK {
      * @param pawn Return value of @getPawnPrice
      * @returns transaction
      */
-    public async getApproval(address: string, pawn: IPawnPrice): Promise<ContractTransaction> {
+    public async getApproval(address: string, pawn: IPawnPrice): Promise<ContractTransaction | boolean> {
+        const isApproved = await this.checkApproval(address, pawn);
+        if (isApproved) {
+            return true;
+        }
+
         const signer = this.provider.getSigner();
         const inputs = this.parseInputs(SampleERC721.approve.inputs, {
             to: pawn.wrapperAddress,
@@ -200,6 +205,21 @@ export class CyanSDK {
         const tx = await sampleContract.approve.apply(null, inputs);
         await tx.wait();
         return tx;
+    }
+
+    /**
+     * Checks approval
+     * @param address NFT Collection address
+     * @param pawn Return value of @getPawnPrice
+     * @returns boolean
+     */
+    public async checkApproval(address: string, pawn: IPawnPrice) {
+        const sampleContract = new Contract(address, Object.values(SampleERC721), this.provider);
+        const inputs = this.parseInputs(SampleERC721.getApproved.inputs, {
+            tokenId: pawn.tokenId,
+        });
+        const isApproved = await sampleContract.getApproved.apply(null, inputs);
+        return isApproved.toLowerCase() === pawn.wrapperAddress;
     }
 
     /**
@@ -233,7 +253,8 @@ export class CyanSDK {
             | IAbi['createPAWNPaymentPlan']['inputs']
             | IAbi['getNextPayment']['inputs']
             | IAbi['pay']['inputs']
-            | IAbi['approve']['inputs'],
+            | IAbi['sample']['approve']['inputs']
+            | IAbi['sample']['getApproved']['inputs'],
         data: Record<string, number | string | BigNumber | any>
     ): any[] {
         const inputs = obj
