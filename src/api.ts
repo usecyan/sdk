@@ -52,7 +52,11 @@ export class CyanAPI {
             }),
         };
 
-        return await this.fetchData(`/bnpl/pricer?wallet=${wallet}&source=sdk`, options);
+        const params: Record<string, string> = wallet ? { wallet, source: 'sdk' } : { source: 'sdk' };
+
+        const searchParams = new URLSearchParams(params);
+
+        return await this.fetchData(`/bnpl/pricer?${searchParams}`, options);
     }
 
     /**

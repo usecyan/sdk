@@ -184,12 +184,17 @@ export class CyanSDK {
     }
 
     /**
-     * Asks for NFT approval
+     * Asks for NFT approval only if token has not given approval to Cyan wrapper contract
      * @param address NFT collection address
      * @param pawn Return value of @getPawnPrice
-     * @returns transaction
+     * @returns boolean
      */
-    public async getApproval(address: string, pawn: IPawnPrice): Promise<ContractTransaction> {
+    public async getApproval(address: string, pawn: IPawnPrice): Promise<boolean> {
+        const isWrapperApproved = await this.checkApproval(address, pawn);
+        if (isWrapperApproved) {
+            return true;
+        }
+
         const signer = this.provider.getSigner();
         const inputs = this.parseInputs(SampleERC721.approve.inputs, {
             to: pawn.wrapperAddress,
@@ -199,7 +204,23 @@ export class CyanSDK {
 
         const tx = await sampleContract.approve.apply(null, inputs);
         await tx.wait();
-        return tx;
+        return true;
+    }
+
+    /**
+     * Checks current token has given approval to Cyan wrapper contract
+     * @param address NFT Collection address
+     * @param pawn Return value of @getPawnPrice
+     * @returns boolean
+     */
+    public async checkApproval(address: string, pawn: IPawnPrice): Promise<boolean> {
+        const signer = this.provider.getSigner();
+        const sampleContract = new Contract(address, Object.values(SampleERC721), signer);
+        const inputs = this.parseInputs(SampleERC721.getApproved.inputs, {
+            tokenId: pawn.tokenId,
+        });
+        const result = await sampleContract.getApproved.apply(null, inputs);
+        return result.toLowerCase() === pawn.wrapperAddress.toLowerCase();
     }
 
     /**
@@ -233,7 +254,8 @@ export class CyanSDK {
             | IAbi['createPAWNPaymentPlan']['inputs']
             | IAbi['getNextPayment']['inputs']
             | IAbi['pay']['inputs']
-            | IAbi['approve']['inputs'],
+            | IAbi['sampleERC721']['approve']['inputs']
+            | IAbi['sampleERC721']['getApproved']['inputs'],
         data: Record<string, number | string | BigNumber | any>
     ): any[] {
         const inputs = obj

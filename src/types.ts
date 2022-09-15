@@ -18,13 +18,16 @@ interface IAbiFnInput {
 interface IAbiFn {
     inputs: Array<IAbiFnInput>;
     name: string;
-    output?: Array<IAbiFnInput>;
+    outputs?: Array<IAbiFnInput>;
     stateMutability: 'payable' | 'view' | 'nonpayable';
     type: 'function';
 }
 
 export interface IAbi {
-    approve: IAbiFn;
+    sampleERC721: {
+        approve: IAbiFn;
+        getApproved: IAbiFn;
+    };
     createBNPLPaymentPlan: IAbiFn;
     createPAWNPaymentPlan: IAbiFn;
     getNextPayment: IAbiFn;

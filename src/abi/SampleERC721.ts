@@ -1,6 +1,6 @@
 import { IAbi } from '../types';
 
-export const SampleERC721: { approve: IAbi['approve'] } = {
+export const SampleERC721: IAbi['sampleERC721'] = {
     approve: {
         inputs: [
             {
@@ -15,8 +15,27 @@ export const SampleERC721: { approve: IAbi['approve'] } = {
             },
         ],
         name: 'approve',
-        output: [],
+        outputs: [],
         stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    getApproved: {
+        inputs: [
+            {
+                internalType: 'uint256',
+                name: 'tokenId',
+                type: 'uint256',
+            },
+        ],
+        name: 'getApproved',
+        outputs: [
+            {
+                internalType: 'address',
+                name: '',
+                type: 'address',
+            },
+        ],
+        stateMutability: 'view',
         type: 'function',
     },
 };
