@@ -40,6 +40,19 @@ export const CreateBNPL = React.memo(({ provider, cyan }: { provider: ethers.pro
         }
     };
 
+    const handleAcceptance = async () => {
+        try {
+            setLoading(true);
+            const signer = provider.getSigner();
+            await cyan.acceptPlanInfo(data, await signer.getAddress());
+            setMessage('Accepted');
+        } catch (e) {
+            console.log(e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleCreateBNPL = async () => {
         setLoading(true);
         const result = await cyan.createBnpl(data);
@@ -90,6 +103,7 @@ export const CreateBNPL = React.memo(({ provider, cyan }: { provider: ethers.pro
             ) : (
                 <>
                     <Button onClick={check}>Check</Button>
+                    <Button onClick={handleAcceptance}>Accept</Button>
                     <Button onClick={handleCreateBNPL} disabled={!data}>
                         Create BNPL
                     </Button>

@@ -1,4 +1,5 @@
 import {
+    FnAcceptanceInput,
     IAppraisal,
     IAppraisalError,
     IBnplPrice,
@@ -35,6 +36,19 @@ export class CyanAPI {
                 throw error;
             }
         };
+    }
+
+    /**
+     * Creates acceptance signature
+     * @param data FnAcceptanceInput
+     */
+    public async createAcceptance(data: FnAcceptanceInput): Promise<void> {
+        const options = {
+            method: 'POST',
+            body: JSON.stringify(data),
+        };
+
+        return await this.fetchData('/pricer/acceptance', options);
     }
 
     /**

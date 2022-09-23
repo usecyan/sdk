@@ -1,4 +1,4 @@
-import { BigNumber, Contract, ContractTransaction, ethers } from 'ethers';
+import { BigNumber, Contract, ContractTransaction, ethers, utils } from 'ethers';
 import SampleERC721 from './abi/SampleERC721';
 import { CyanAPI } from './api';
 
@@ -14,6 +14,7 @@ import {
     IAppraisal,
     IAppraisalError,
 } from './types';
+import { createHashSHA256 } from './utils';
 
 export class CyanSDK {
     private provider: ethers.providers.Web3Provider;
@@ -89,6 +90,70 @@ export class CyanSDK {
         const { abi, data }: ISDKResponse<IPlan[]> = await this.api.getUserPlans(address);
         this.abi = abi;
         return data;
+    }
+
+    /**
+     * Accept plan info
+     * @param data IBnplPrice or IPawnPrice
+     * @param wallet User wallet address
+     */
+    public async acceptPlanInfo(data: IBnplPrice | IPawnPrice, wallet: string): Promise<void> {
+        const price = 'unlockAmount' in data ? data.unlockAmount : data?.price;
+
+        const signature = await this.getAcceptanceSignature(data, wallet);
+
+        await this.api.createAcceptance({
+            signature,
+            wrapperAddress: data.wrapperAddress,
+            tokenId: data.tokenId,
+            term: data.term,
+            amount: price.toString(),
+            totalNumOfPayments: data.totalNumOfPayments,
+            blockNum: data.lastBlockNum,
+            interestRate: data.interestRate,
+            serviceFeeRate: data.serviceFeeRate,
+            pricerSignature: data.signature,
+            wallet,
+        });
+    }
+
+    /**
+     * Get Acceptance Signature
+     * @param data IBnplPrice or IPawnPrice
+     * @param wallet User wallet address
+     */
+    public async getAcceptanceSignature(data: IPawnPrice | IBnplPrice, wallet: string): Promise<string> {
+        const signer = this.provider.getSigner();
+        const price = 'unlockAmount' in data ? data.unlockAmount : data?.price;
+
+        const nonce = await createHashSHA256(
+            [
+                data.tokenId,
+                data.wrapperAddress,
+                price.toString(),
+                data.term,
+                data.totalNumOfPayments,
+                data.lastBlockNum,
+                data.interestRate,
+                data.serviceFeeRate,
+                data.signature,
+                wallet,
+            ].join('.')
+        );
+
+        const message = `
+You are accepting following info:
+
+Token ID: ${data.tokenId}
+Amount: ${utils.formatEther(price)} ETH
+Number of payments: ${data.totalNumOfPayments}
+Interest Rate: ${(data.interestRate / 100).toFixed(2)} %
+Service Fee Rate: ${(data.serviceFeeRate / 100).toFixed(2)} %
+Your wallet: ${wallet}
+
+Your Nonce: ${nonce}
+`;
+        return await signer.signMessage(message);
     }
 
     /**

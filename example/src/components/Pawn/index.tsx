@@ -37,6 +37,18 @@ export const CreatePawn = React.memo(({ provider, cyan }: { provider: ethers.pro
         }
     };
 
+    const handleAcceptance = async () => {
+        try {
+            setLoading(true);
+            const signer = provider.getSigner();
+            await cyan.acceptPlanInfo(appraisal, await signer.getAddress());
+        } catch (e) {
+            console.log(e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleGetApproval = async () => {
         try {
             setLoading(true);
@@ -172,17 +184,20 @@ export const CreatePawn = React.memo(({ provider, cyan }: { provider: ethers.pro
                     <Button type="button" onClick={getPrice}>
                         1. Check
                     </Button>
-                    <Button type="button" onClick={handleGetApproval} disabled={!appraisal}>
-                        2. Get Approval
+                    <Button type="button" onClick={handleAcceptance}>
+                        2. Accept
+                    </Button>
+                    <Button type="button" onClick={handleGetApproval}>
+                        3. Get Approval
                     </Button>
                     <Button type="button" onClick={handleCreatePawn} disabled={!approved}>
-                        3. Create Pawn
+                        4. Create Pawn
                     </Button>
                     <Button type="button" onClick={handleNextPayment}>
-                        4. Get Next Payment
+                        5. Get Next Payment
                     </Button>
                     <Button type="button" onClick={handlePay} disabled={!nextPayment}>
-                        5. Pay
+                        6. Pay
                     </Button>
                 </>
             )}

@@ -125,3 +125,17 @@ export interface IAppraisal {
 export interface IAppraisalError {
     message: 'Error: Project is not supported yet.';
 }
+
+export interface FnAcceptanceInput {
+    signature: string;
+    wrapperAddress: string;
+    tokenId: string;
+    term: number;
+    amount: string;
+    totalNumOfPayments: number;
+    interestRate: number;
+    serviceFeeRate: number;
+    blockNum: number;
+    pricerSignature: string;
+    wallet: string;
+}
