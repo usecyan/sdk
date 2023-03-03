@@ -13,6 +13,7 @@ import {
     ISDKResponse,
     IAppraisal,
     IAppraisalError,
+    IChain,
 } from './types';
 import { createHashSHA256 } from './utils';
 
@@ -30,12 +31,13 @@ export class CyanSDK {
     /**
      * Retrieves BNPL pricing data for multiple NFTs in one request.
      * This endpoint accepts an array of NFT collection addresses and token IDs.
+     * @param chain Chain slug
      * @param nfts Array of NFTs
      * @param wallet User wallet address
      * @returns Array of IBnplPrice
      */
-    public async getBnplPrices(nfts: IPlanInput[], wallet?: string): Promise<IBnplPrice[]> {
-        const { abi, data, paymentPlanContractAddress } = await this.api.getBnplPrices(nfts, wallet);
+    public async getBnplPrices(chain: IChain, nfts: IPlanInput[], wallet?: string): Promise<IBnplPrice[]> {
+        const { abi, data, paymentPlanContractAddress } = await this.api.getBnplPrices(chain, nfts, wallet);
 
         this.abi = abi;
         this.paymentPlanContractAddress = paymentPlanContractAddress;
@@ -44,26 +46,29 @@ export class CyanSDK {
 
     /**
      * Retrieves PAWN appraisal data for multiple NFTs in one request. This endpoint accepts an array of NFT collection addresses and token IDs.
+     * @param chain Chain slug
      * @param nfts Array of NFTs
      * @returns Array of IAppraisal or IAppraisalError
      */
-    public async getPawnAppraisals(nfts: INFT[]): Promise<(IAppraisal | IAppraisalError)[]> {
-        return await this.api.getPawnAppraisals(nfts);
+    public async getPawnAppraisals(chain: IChain, nfts: INFT[]): Promise<(IAppraisal | IAppraisalError)[]> {
+        return await this.api.getPawnAppraisals(chain, nfts);
     }
 
     /**
      * Retrieve pricing data for a single PAWN request. This endpoint prices out a plan to post the NFT as collateral and receive a loan in ETH.
+     * @param chain Chain slug
      * @param address NFT Collection address
      * @param tokenId NFT id
      * @param params {weight, totalNumOfPayments, term, wallet }
      * @returns IPawnPrice
      */
-    public async getPawnPrice(address: string, tokenId: string, params: IPawnParams): Promise<IPawnPrice> {
-        const { data, abi, paymentPlanContractAddress }: ISDKResponse<IPawnPrice> = await this.api.getPawnPrice(
-            address,
-            tokenId,
-            params
-        );
+    public async getPawnPrice(
+        chain: IChain,
+        address: string,
+        tokenId: string,
+        params: IPawnParams
+    ): Promise<IPawnPrice> {
+        const { data, abi, paymentPlanContractAddress } = await this.api.getPawnPrice(chain, address, tokenId, params);
         this.abi = abi;
         this.paymentPlanContractAddress = paymentPlanContractAddress;
         return data;
@@ -94,16 +99,18 @@ export class CyanSDK {
 
     /**
      * Accept plan info
+     * @param chain Chain slug
      * @param data IBnplPrice or IPawnPrice
      * @param wallet User wallet address
      */
-    public async acceptPlanInfo(data: IBnplPrice | IPawnPrice, wallet: string): Promise<void> {
-        const price = 'unlockAmount' in data ? data.unlockAmount : data?.price;
-
+    public async acceptPlanInfo(chain: IChain, data: IBnplPrice | IPawnPrice, wallet: string): Promise<void> {
+        const price = 'unlockAmount' in data ? data.unlockAmount : data.price;
+        const counterPaidPayments = 'unlockAmount' in data ? 0 : 1;
         const signature = await this.getAcceptanceSignature(data, wallet);
 
-        await this.api.createAcceptance({
+        await this.api.createAcceptance(chain, {
             signature,
+            counterPaidPayments,
             wrapperAddress: data.wrapperAddress,
             tokenId: data.tokenId,
             term: data.term,
@@ -124,7 +131,8 @@ export class CyanSDK {
      */
     public async getAcceptanceSignature(data: IPawnPrice | IBnplPrice, wallet: string): Promise<string> {
         const signer = this.provider.getSigner();
-        const price = 'unlockAmount' in data ? data.unlockAmount : data?.price;
+        const price = 'unlockAmount' in data ? data.unlockAmount : data.price;
+        const counterPaidPayments = 'unlockAmount' in data ? 0 : 1;
 
         const nonce = await createHashSHA256(
             [
@@ -133,6 +141,7 @@ export class CyanSDK {
                 price.toString(),
                 data.term,
                 data.totalNumOfPayments,
+                counterPaidPayments,
                 data.lastBlockNum,
                 data.interestRate,
                 data.serviceFeeRate,
@@ -147,6 +156,7 @@ You are accepting following info:
 Token ID: ${data.tokenId}
 Amount: ${utils.formatEther(price)} ETH
 Number of payments: ${data.totalNumOfPayments}
+Paid payments: ${counterPaidPayments}
 Interest Rate: ${(data.interestRate / 100).toFixed(2)} %
 Service Fee Rate: ${(data.serviceFeeRate / 100).toFixed(2)} %
 Your wallet: ${wallet}

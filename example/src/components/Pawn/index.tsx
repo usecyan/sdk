@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { ethers } from 'ethers';
-import Cyan, { IPawnPrice } from '@usecyan/sdk';
+import Cyan, { IChain, IPawnPrice } from '@usecyan/sdk';
 
 import Button from '../common/Button';
 import Input from '../common/Input';
 import Loading from '../common/Loading';
 
-export const CreatePawn = React.memo(({ provider, cyan }: { provider: ethers.providers.Web3Provider; cyan: Cyan }) => {
+type IProps = { provider: ethers.providers.Web3Provider; cyan: Cyan; chain: IChain };
+export const CreatePawn = React.memo(({ provider, cyan, chain }: IProps) => {
     const [address, setAddress] = useState('');
     const [tokenId, setTokenId] = useState('');
     const [term, setTerm] = useState<'2678400' | '86400'>('2678400');
@@ -22,7 +23,7 @@ export const CreatePawn = React.memo(({ provider, cyan }: { provider: ethers.pro
         const signer = provider.getSigner();
 
         try {
-            const calculatedData = await cyan.getPawnPrice(address, tokenId, {
+            const calculatedData = await cyan.getPawnPrice(chain, address, tokenId, {
                 term,
                 totalNumOfPayments: term === '2678400' ? '3' : '1',
                 wallet: await signer.getAddress(),
@@ -41,7 +42,7 @@ export const CreatePawn = React.memo(({ provider, cyan }: { provider: ethers.pro
         try {
             setLoading(true);
             const signer = provider.getSigner();
-            await cyan.acceptPlanInfo(appraisal, await signer.getAddress());
+            await cyan.acceptPlanInfo(chain, appraisal, await signer.getAddress());
         } catch (e) {
             console.log(e);
         } finally {

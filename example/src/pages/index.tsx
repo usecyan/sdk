@@ -1,13 +1,13 @@
 import React from "react";
 
 import useAccount from "../hooks/useAccount";
-import { Button, Input, Loading } from "../components/common";
+import { Button } from "../components/common";
 import CreateBNPL from "../components/Bnpl";
 import CreatePawn from "../components/Pawn";
 import GetUserPlans from "../components/Plan";
 
 export default function Home() {
-  const { account, balance, errorMessage, connectHandler, provider, cyan } =
+  const { account, balance, errorMessage, connectHandler, provider, cyan, chain } =
     useAccount();
 
   return (
@@ -23,8 +23,8 @@ export default function Home() {
 
       {account ? (
         <div className="container mx-auto grid items-center max-w-2xl grid-cols-1 gap-y-16 gap-x-8 lg:grid-cols-1 lg:max-w-7xl">
-          <CreateBNPL provider={provider} cyan={cyan} />
-          <CreatePawn provider={provider} cyan={cyan} />
+          <CreateBNPL provider={provider} cyan={cyan} chain={chain} />
+          <CreatePawn provider={provider} cyan={cyan} chain={chain} />
           <GetUserPlans cyan={cyan} account={account} />
         </div>
       ) : null}

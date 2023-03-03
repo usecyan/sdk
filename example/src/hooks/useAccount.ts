@@ -6,10 +6,16 @@ declare let window: any;
 let cyan: Cyan;
 let provider: ethers.providers.Web3Provider;
 
+const chainIdToSlug = {
+    '0x1': 'mainnet',
+    '0x5': 'goerli',
+};
+
 export default () => {
     const [errorMessage, setErrorMessage] = useState(null);
     const [account, setAccount] = useState(null);
     const [balance, setBalance] = useState(null);
+    const [chain, setChain] = useState(null);
 
     const connectHandler = async () => {
         if (window.ethereum) {
@@ -41,10 +47,11 @@ export default () => {
         }
     };
 
-    const chainChanged = () => {
+    const chainChanged = (chainId: string) => {
         setErrorMessage(null);
         setAccount(null);
         setBalance(null);
+        setChain(chainIdToSlug[chainId]);
     };
 
     useEffect(() => {
@@ -57,10 +64,13 @@ export default () => {
                 provider,
                 host: 'https://testnet-api.usecyan.com',
             });
+
+            chainChanged(window.ethereum.chainId);
         }
     }, []);
 
     return {
+        chain,
         account,
         balance,
         errorMessage,

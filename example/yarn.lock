@@ -465,10 +465,8 @@
   resolved "https://registry.yarnpkg.com/@types/scheduler/-/scheduler-0.16.2.tgz#1a62f89525723dde24ba1b01b092bf5df8ad4d39"
   integrity sha512-hppQEBDmlwhFAXKJX2KnWLYu5yMfi91yazPb2l+lbJiwW+wdo1gNeRA+3RgNSO39WYX2euey41KEwnqesU2Jew==
 
-"@usecyan/sdk@^0.1.0":
-  version "0.1.4"
-  resolved "https://registry.yarnpkg.com/@usecyan/sdk/-/sdk-0.1.4.tgz#2d573fde361bcf24a7dff68fff3bb8a12284d7c6"
-  integrity sha512-L8zcPKyy7StPD9jbbarfXyDJ5pV0bHP3aYJ/3E071g6EuSB2MVZ+41WZu/U3wkZIMaUA8qaMxa84/psS125I3A==
+"@usecyan/sdk@file:..":
+  version "0.1.5"
   dependencies:
     ethers "^5.6.9"
     isomorphic-unfetch "^3.1.0"

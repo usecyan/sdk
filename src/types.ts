@@ -126,8 +126,12 @@ export interface IAppraisalError {
     message: 'Error: Project is not supported yet.';
 }
 
+export const chains = ['mainnet', 'goerli', 'polygon', 'mumbai', 'arbitrum', 'bsc', 'optimism'] as const;
+export type IChain = typeof chains[keyof typeof chains];
+
 export interface FnAcceptanceInput {
     signature: string;
+    counterPaidPayments: number;
     wrapperAddress: string;
     tokenId: string;
     term: number;
