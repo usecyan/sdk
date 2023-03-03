@@ -3,6 +3,7 @@ import {
     IAppraisal,
     IAppraisalError,
     IBnplPrice,
+    IChain,
     INFT,
     IPawnParams,
     IPawnPrice,
@@ -40,25 +41,31 @@ export class CyanAPI {
 
     /**
      * Creates acceptance signature
+     * @param chain Chain slug
      * @param data FnAcceptanceInput
      */
-    public async createAcceptance(data: FnAcceptanceInput): Promise<void> {
+    public async createAcceptance(chain: IChain, data: FnAcceptanceInput): Promise<void> {
         const options = {
             method: 'POST',
             body: JSON.stringify(data),
         };
 
-        return await this.fetchData('/pricer/acceptance', options);
+        return await this.fetchData(`/${chain}/pricer/acceptance`, options);
     }
 
     /**
      * Retrieves BNPL pricing data for multiple NFTs in one request.
      * This endpoint accepts an array of NFT collection addresses and token IDs.
+     * @param chain Chain slug
      * @param nfts Array of NFTs
      * @param wallet User wallet address
      * @returns Array of IBnplPrice
      */
-    public async getBnplPrices(nfts: IPlanInput[], wallet?: string): Promise<ISDKResponse<IBnplPrice[]>> {
+    public async getBnplPrices(
+        chain: IChain,
+        nfts: IPlanInput[],
+        wallet?: string
+    ): Promise<ISDKResponse<IBnplPrice[]>> {
         const options = {
             method: 'POST',
             body: JSON.stringify({
@@ -67,40 +74,44 @@ export class CyanAPI {
         };
 
         const params: Record<string, string> = wallet ? { wallet, source: 'sdk' } : { source: 'sdk' };
-
         const searchParams = new URLSearchParams(params);
 
-        return await this.fetchData(`/bnpl/pricer?${searchParams}`, options);
+        return await this.fetchData(`/bnpl/${chain}/pricer?${searchParams}`, options);
     }
 
     /**
-     * Retrieves PAWN appraisal data for multiple NFTs in one request. This endpoint accepts an array of NFT collection addresses and token IDs.
+     * Retrieves PAWN appraisal data for multiple NFTs in one request.
+     * This endpoint accepts an array of NFT collection addresses and token IDs.
+     * @param chain Chain slug
      * @param nfts Array of NFTs
      * @returns IAppraisal or IAppraisalError
      */
-    public async getPawnAppraisals(nfts: INFT[]): Promise<(IAppraisal | IAppraisalError)[]> {
+    public async getPawnAppraisals(chain: IChain, nfts: INFT[]): Promise<(IAppraisal | IAppraisalError)[]> {
         const options = {
             method: 'POST',
             body: JSON.stringify({
                 nfts,
             }),
         };
-        return await this.fetchData('/pawn/pricer', options);
+        return await this.fetchData(`/pawn/${chain}/pricer`, options);
     }
 
     /**
      * Retrieve pricing data for a single PAWN request. This endpoint prices out a plan to post the NFT as collateral and receive a loan in ETH.
+     * @param chain Chain slug
      * @param address NFT Collection address
      * @param tokenId NFT id
      * @param params {weight, totalNumOfPayments, term, wallet }
      * @returns IPawnPrice
      */
     public async getPawnPrice(
+        chain: IChain,
         address: string,
         tokenId: string,
         params: IPawnParams
     ): Promise<ISDKResponse<IPawnPrice>> {
-        return await this.fetchData(`/pawn/pricer/${address}/${tokenId}?` + new URLSearchParams({ ...params }));
+        const url = `/pawn/${chain}/pricer/${address}/${tokenId}?${new URLSearchParams({ ...params })}`;
+        return await this.fetchData(url);
     }
 
     /**

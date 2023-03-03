@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { ethers } from 'ethers';
-import Cyan from '@usecyan/sdk';
+import Cyan, { IChain } from '@usecyan/sdk';
 
 import Button from '../common/Button';
 import Input from '../common/Input';
 import Loading from '../common/Loading';
 
-export const CreateBNPL = React.memo(({ provider, cyan }: { provider: ethers.providers.Web3Provider; cyan: Cyan }) => {
+type IProps = { provider: ethers.providers.Web3Provider; cyan: Cyan; chain: IChain };
+export const CreateBNPL = React.memo(({ provider, cyan, chain }: IProps) => {
     const [address, setAddress] = useState('');
     const [tokenId, setTokenId] = useState('');
     const [data, setData] = useState(null);
@@ -21,6 +22,7 @@ export const CreateBNPL = React.memo(({ provider, cyan }: { provider: ethers.pro
             const signer = provider.getSigner();
 
             const calculatedData = await cyan.getBnplPrices(
+                chain,
                 [
                     {
                         address,
@@ -44,7 +46,7 @@ export const CreateBNPL = React.memo(({ provider, cyan }: { provider: ethers.pro
         try {
             setLoading(true);
             const signer = provider.getSigner();
-            await cyan.acceptPlanInfo(data, await signer.getAddress());
+            await cyan.acceptPlanInfo(chain, data, await signer.getAddress());
             setMessage('Accepted');
         } catch (e) {
             console.log(e);
