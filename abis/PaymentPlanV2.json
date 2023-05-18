@@ -1,0 +1,474 @@
+[
+    {
+        "inputs": [],
+        "name": "InvalidAddress",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "InvalidAmount",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "InvalidAutoRepaymentDate",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "InvalidAutoRepaymentStatus",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "InvalidBaseDiscountRate",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "InvalidBlockNumber",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "InvalidDownPayment",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "InvalidDownPaymentPercent",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "InvalidInterestRate",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "InvalidItem",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "InvalidPaidCount",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "InvalidReviveDate",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "InvalidSender",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "InvalidServiceFeeRate",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "InvalidSignature",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "InvalidStage",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "InvalidTerm",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "InvalidTokenPrice",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "InvalidTotalNumberOfPayments",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "PaymentPlanAlreadyExists",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "PaymentPlanNotFound",
+        "type": "error"
+    },
+
+    {
+        "inputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "uint256",
+                        "name": "amount",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "tokenId",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "address",
+                        "name": "contractAddress",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "address",
+                        "name": "cyanVaultAddress",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint8",
+                        "name": "itemType",
+                        "type": "uint8"
+                    }
+                ],
+                "internalType": "struct CyanPaymentPlanV2.Item",
+                "name": "item",
+                "type": "tuple"
+            },
+            {
+                "components": [
+                    {
+                        "internalType": "uint256",
+                        "name": "amount",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint32",
+                        "name": "downPaymentPercent",
+                        "type": "uint32"
+                    },
+                    {
+                        "internalType": "uint32",
+                        "name": "interestRate",
+                        "type": "uint32"
+                    },
+                    {
+                        "internalType": "uint32",
+                        "name": "serviceFeeRate",
+                        "type": "uint32"
+                    },
+                    {
+                        "internalType": "uint32",
+                        "name": "term",
+                        "type": "uint32"
+                    },
+                    {
+                        "internalType": "uint8",
+                        "name": "totalNumberOfPayments",
+                        "type": "uint8"
+                    },
+                    {
+                        "internalType": "uint8",
+                        "name": "counterPaidPayments",
+                        "type": "uint8"
+                    },
+                    {
+                        "internalType": "uint8",
+                        "name": "autoRepayStatus",
+                        "type": "uint8"
+                    }
+                ],
+                "internalType": "struct CyanPaymentPlanV2.Plan",
+                "name": "plan",
+                "type": "tuple"
+            },
+            {
+                "internalType": "uint256",
+                "name": "planId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "signedBlockNum",
+                "type": "uint256"
+            },
+            {
+                "internalType": "bytes",
+                "name": "signature",
+                "type": "bytes"
+            }
+        ],
+        "name": "createPawn",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "uint256",
+                        "name": "amount",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "tokenId",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "address",
+                        "name": "contractAddress",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "address",
+                        "name": "cyanVaultAddress",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint8",
+                        "name": "itemType",
+                        "type": "uint8"
+                    }
+                ],
+                "internalType": "struct CyanPaymentPlanV2.Item",
+                "name": "item",
+                "type": "tuple"
+            },
+            {
+                "components": [
+                    {
+                        "internalType": "uint256",
+                        "name": "amount",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint32",
+                        "name": "downPaymentPercent",
+                        "type": "uint32"
+                    },
+                    {
+                        "internalType": "uint32",
+                        "name": "interestRate",
+                        "type": "uint32"
+                    },
+                    {
+                        "internalType": "uint32",
+                        "name": "serviceFeeRate",
+                        "type": "uint32"
+                    },
+                    {
+                        "internalType": "uint32",
+                        "name": "term",
+                        "type": "uint32"
+                    },
+                    {
+                        "internalType": "uint8",
+                        "name": "totalNumberOfPayments",
+                        "type": "uint8"
+                    },
+                    {
+                        "internalType": "uint8",
+                        "name": "counterPaidPayments",
+                        "type": "uint8"
+                    },
+                    {
+                        "internalType": "uint8",
+                        "name": "autoRepayStatus",
+                        "type": "uint8"
+                    }
+                ],
+                "internalType": "struct CyanPaymentPlanV2.Plan",
+                "name": "plan",
+                "type": "tuple"
+            },
+            {
+                "internalType": "uint256",
+                "name": "planId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "signedBlockNum",
+                "type": "uint256"
+            },
+            {
+                "internalType": "bytes",
+                "name": "signature",
+                "type": "bytes"
+            }
+        ],
+        "name": "createBNPL",
+        "outputs": [],
+        "stateMutability": "payable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "planId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "bool",
+                "name": "isEarlyPayment",
+                "type": "bool"
+            }
+        ],
+        "name": "pay",
+        "outputs": [],
+        "stateMutability": "payable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "uint256",
+                        "name": "amount",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint32",
+                        "name": "downPaymentPercent",
+                        "type": "uint32"
+                    },
+                    {
+                        "internalType": "uint32",
+                        "name": "interestRate",
+                        "type": "uint32"
+                    },
+                    {
+                        "internalType": "uint32",
+                        "name": "serviceFeeRate",
+                        "type": "uint32"
+                    },
+                    {
+                        "internalType": "uint32",
+                        "name": "term",
+                        "type": "uint32"
+                    },
+                    {
+                        "internalType": "uint8",
+                        "name": "totalNumberOfPayments",
+                        "type": "uint8"
+                    },
+                    {
+                        "internalType": "uint8",
+                        "name": "counterPaidPayments",
+                        "type": "uint8"
+                    },
+                    {
+                        "internalType": "uint8",
+                        "name": "autoRepayStatus",
+                        "type": "uint8"
+                    }
+                ],
+                "internalType": "struct CyanPaymentPlanV2.Plan",
+                "name": "plan",
+                "type": "tuple"
+            }
+        ],
+        "name": "getExpectedPlan",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "pure",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "planId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "bool",
+                "name": "isEarlyPayment",
+                "type": "bool"
+            }
+        ],
+        "name": "getPaymentInfoByPlanId",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "planId",
+                "type": "uint256"
+            }
+        ],
+        "name": "getCurrencyAddressByPlanId",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    }
+]

@@ -55,18 +55,21 @@ export default () => {
     };
 
     useEffect(() => {
-        if (window.ethereum) {
-            window.ethereum.on('accountsChanged', accountsChanged);
-            window.ethereum.on('chainChanged', chainChanged);
-            provider = new ethers.providers.Web3Provider(window?.ethereum, 'any');
-            cyan = new Cyan({
+        if (!window.ethereum) return;
+
+        window.ethereum.on('accountsChanged', accountsChanged);
+        window.ethereum.on('chainChanged', chainChanged);
+        provider = new ethers.providers.Web3Provider(window?.ethereum, 'any');
+
+        (async () => {
+            cyan = await Cyan.initiate({
                 apiKey: '4I9zLVXwiS2nkWZoqLfRMv6G1jCRDD7sn4I8_y-Brr8',
                 provider,
-                host: 'https://testnet-api.usecyan.com',
+                host: 'http://localhost:5000',
             });
+        })();
 
-            chainChanged(window.ethereum.chainId);
-        }
+        chainChanged(window.ethereum.chainId);
     }, []);
 
     return {

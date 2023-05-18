@@ -12,9 +12,9 @@
     },
     "scripts": {
         "start": "tsdx watch",
-        "build": "tsdx build",
+        "build": "typechain --target ethers-v5 --out-dir src/contracts ./abis/*.json && tsdx build",
         "test": "tsdx test",
-        "lint": "tsdx lint",
+        "lint": "tsdx lint --ignore-pattern 'src/contracts/**/*.ts'",
         "prepare": "tsdx build",
         "size": "size-limit",
         "analyze": "size-limit --why"
@@ -52,11 +52,13 @@
     ],
     "devDependencies": {
         "@size-limit/preset-small-lib": "^8.0.0",
+        "@typechain/ethers-v5": "^10.2.0",
         "husky": "^8.0.1",
         "process": "^0.11.10",
         "size-limit": "^8.0.0",
         "tsdx": "^0.14.1",
         "tslib": "^2.4.0",
+        "typechain": "^8.1.1",
         "typescript": "^4.7.4"
     },
     "dependencies": {
