@@ -31,15 +31,15 @@ export const CreatePawn = React.memo(({ provider, cyan }: IProps) => {
     const pricerStep1 = async () => {
         setLoading(true);
         try {
-            const result = await cyan.pricePawnsStep1({
+            const result = await cyan.pricePawnsStep1(
                 currencyAddress,
-                items: items.map(({ address, tokenId }) => ({
+                items.map(({ address, tokenId }) => ({
                     address,
                     tokenId,
                     amount: 0,
                     itemType: ItemType.ERC721,
-                })),
-            });
+                }))
+            );
             setPricerStep1Data(result);
         } catch (e) {
             alert(e.message);

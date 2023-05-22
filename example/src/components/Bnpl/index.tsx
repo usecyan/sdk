@@ -30,15 +30,15 @@ export const CreateBNPL = React.memo(({ provider, cyan }: IProps) => {
     const pricerStep1 = async () => {
         setLoading(true);
         try {
-            const result = await cyan.priceBnplsStep1({
-                currencyAddress: ethers.constants.AddressZero,
-                items: items.map(({ address, tokenId }) => ({
+            const result = await cyan.priceBnplsStep1(
+                ethers.constants.AddressZero,
+                items.map(({ address, tokenId }) => ({
                     address,
                     tokenId,
                     amount: 0,
                     itemType: ItemType.ERC721,
-                })),
-            });
+                }))
+            );
             setPricerStep1Data(result);
         } catch (e) {
             alert(e.message);

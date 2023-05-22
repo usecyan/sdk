@@ -122,21 +122,13 @@ export const generateNonce = async (paymentPlans: ICreatePlanParams[]) => {
 export const generateBnplOptions = (result: IPricerStep1['response']): IOption[] => generateOptions('bnpl', result);
 export const generatePawnOptions = (result: IPricerStep1['response']): IOption[] => generateOptions('pawn', result);
 const generateOptions = (type: 'bnpl' | 'pawn', result: IPricerStep1['response']): IOption[] => {
-    const { defaultTerm, defaultFlashPawnTerm, defaultServiceFeeRate, config, items } = result;
+    const { config, items } = result;
 
     const { totalInterestRate, totalPrice } = calculateTotals(items);
-    return config.map(([duration, loanRate, multiplier, divider, adder]) => {
-        let term = defaultTerm;
-        let serviceFeeRate = defaultServiceFeeRate;
-        if (type === 'pawn' && duration === defaultFlashPawnTerm) {
-            term = defaultFlashPawnTerm;
-            serviceFeeRate = 0;
-        }
-
+    return config.map(([term, totalNumberOfPayments, serviceFeeRate, loanRate, multiplier, divider, adder]) => {
         const downpaymentRate = type === 'bnpl' ? 100_00 - loanRate : 0;
         const counterPaidPayments = type === 'bnpl' ? 1 : 0;
 
-        const totalNumberOfPayments = duration / term + counterPaidPayments;
         const interestRate = Math.ceil((totalInterestRate * multiplier) / divider) + adder;
         const { downpaymentAmount, monthlyAmount } = getExpectedPlanSync({
             amount: totalPrice.mul(downpaymentRate + loanRate).div(100_00),
@@ -154,7 +146,6 @@ const generateOptions = (type: 'bnpl' | 'pawn', result: IPricerStep1['response']
             downpaymentAmount,
             monthlyAmount,
             serviceFeeRate,
-            duration,
             loanRate,
         };
     });

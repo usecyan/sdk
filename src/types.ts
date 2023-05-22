@@ -78,15 +78,12 @@ export type IConfigs = {
 
 export type IOption = {
     term: number;
-    duration: number;
     loanRate: number;
-
     totalNumberOfPayments: number;
     interestRate: number;
     serviceFeeRate: number;
     downpaymentRate: number;
     counterPaidPayments: number;
-
     downpaymentAmount: BigNumber;
     monthlyAmount: BigNumber;
 };
@@ -138,9 +135,6 @@ export type IPricerStep1 = {
         items: IItem[];
     };
     response: {
-        defaultTerm: number;
-        defaultFlashPawnTerm: number;
-        defaultServiceFeeRate: number;
         items: {
             interestRate: number;
             price: BigNumber;
@@ -154,8 +148,7 @@ export type IPricerStep2 = {
         chain: IChain;
         items: IItem[];
         currencyAddress: string;
-        loanRate: number;
-        duration: number;
+        option: number[];
         autoRepayStatus: 0 | 1;
         wallet: string;
     };

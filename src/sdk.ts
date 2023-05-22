@@ -442,8 +442,7 @@ export class CyanSDK {
                 amount: item.amount,
             })),
             currencyAddress,
-            loanRate: option.loanRate,
-            duration: option.duration,
+            option: [option.term, option.totalNumberOfPayments, option.loanRate],
             autoRepayStatus,
             wallet,
         };
