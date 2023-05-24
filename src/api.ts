@@ -1,127 +1,98 @@
-import {
-    FnAcceptanceInput,
-    IAppraisal,
-    IAppraisalError,
-    IBnplPrice,
-    IChain,
-    INFT,
-    IPawnParams,
-    IPawnPrice,
-    IPlan,
-    IPlanInput,
-    ISDKResponse,
-} from './types';
-import { HttpError } from './utils';
+import { BigNumber } from 'ethers';
+import { IConfigs, ICreateAcceptance, IPlan, IPricerStep1, IPricerStep2 } from './types';
+import { HttpError } from './errors';
 
 export class CyanAPI {
     private fetchData: (p: string, o?: RequestInit) => Promise<any>;
 
     constructor(apiKey: string, host: string) {
-        this.fetchData = async (path: string, options?: RequestInit) => {
-            try {
-                const url = new URL(path, host).toString();
-                const res = await fetch(url, {
-                    headers: {
-                        'X-API-KEY': apiKey,
-                        'content-type': 'application/json',
-                    },
-                    ...options,
-                });
-                if (!res.ok) {
-                    const error = await res.json();
-                    const err = new HttpError(error.message, res.status);
-                    return Promise.reject(err);
-                }
-                return res.json();
-            } catch (error) {
-                throw error;
+        this.fetchData = async (path: string, options: RequestInit = {}) => {
+            const url = new URL(path, host).toString();
+            const res = await fetch(url, {
+                headers: {
+                    'X-API-KEY': apiKey,
+                    'content-type': 'application/json',
+                },
+                ...options,
+            });
+            if (!res.ok) {
+                const error = await res.json();
+                throw new HttpError(error.message, res.status);
             }
+            return await res.json();
         };
+    }
+
+    public async getConfigs(): Promise<IConfigs> {
+        return await this.fetchData('/v2/configs');
     }
 
     /**
      * Creates acceptance signature
-     * @param chain Chain slug
-     * @param data FnAcceptanceInput
      */
-    public async createAcceptance(chain: IChain, data: FnAcceptanceInput): Promise<void> {
-        const options = {
+    public async createAcceptance(args: ICreateAcceptance): Promise<void> {
+        await this.fetchData('/v2/users/accept-plan', { method: 'POST', body: JSON.stringify(args) });
+    }
+
+    /**
+     * Calls BNPL pricer step 1
+     */
+    public async priceBnplsStep1(body: IPricerStep1['request']): Promise<IPricerStep1['response']> {
+        return await this._pricerStep1('/v2/pricer/bnpl-step1', body);
+    }
+
+    /**
+     * Calls BNPL pricer step 2
+     */
+    public async priceBnplsStep2(body: IPricerStep2['request']): Promise<IPricerStep2['response']> {
+        return await this._pricerStep2('/v2/pricer/bnpl-step2', body);
+    }
+
+    /**
+     * Calls Pawn pricer step 1
+     */
+    public async pricePawnsStep1(body: IPricerStep1['request']): Promise<IPricerStep1['response']> {
+        return await this._pricerStep1('/v2/pricer/pawn-step1', body);
+    }
+
+    /**
+     * Calls Pawn pricer step 2
+     */
+    public async pricePawnsStep2(body: IPricerStep2['request']): Promise<IPricerStep2['response']> {
+        return await this._pricerStep2('/v2/pricer/pawn-step2', body);
+    }
+
+    private async _pricerStep1(url: string, body: IPricerStep1['request']): Promise<IPricerStep1['response']> {
+        const { items, ...response } = await this.fetchData(url, {
             method: 'POST',
-            body: JSON.stringify(data),
+            body: JSON.stringify({ ...body, source: 'sdk' }),
+        });
+        return {
+            ...response,
+            items: items.map((item: { price: string; interestRate: number }) => ({
+                interestRate: item.interestRate,
+                price: BigNumber.from(item.price),
+            })),
         };
-
-        return await this.fetchData(`/${chain}/pricer/acceptance`, options);
     }
 
-    /**
-     * Retrieves BNPL pricing data for multiple NFTs in one request.
-     * This endpoint accepts an array of NFT collection addresses and token IDs.
-     * @param chain Chain slug
-     * @param nfts Array of NFTs
-     * @param wallet User wallet address
-     * @returns Array of IBnplPrice
-     */
-    public async getBnplPrices(
-        chain: IChain,
-        nfts: IPlanInput[],
-        wallet?: string
-    ): Promise<ISDKResponse<IBnplPrice[]>> {
-        const options = {
-            method: 'POST',
-            body: JSON.stringify({
-                nfts,
-            }),
+    private async _pricerStep2(url: string, body: IPricerStep2['request']): Promise<IPricerStep2['response']> {
+        const response = await this.fetchData(url, { method: 'POST', body: JSON.stringify(body) });
+        return {
+            ...response,
+            plans: response.plans.map(
+                (plan: {
+                    interestRate: number;
+                    planId: number;
+                    price: string;
+                    signature: string;
+                    vaultAddress: string;
+                }) => ({
+                    ...plan,
+                    price: BigNumber.from(plan.price),
+                })
+            ),
         };
-
-        const params: Record<string, string> = wallet ? { wallet, source: 'sdk' } : { source: 'sdk' };
-        const searchParams = new URLSearchParams(params);
-
-        return await this.fetchData(`/bnpl/${chain}/pricer?${searchParams}`, options);
-    }
-
-    /**
-     * Retrieves PAWN appraisal data for multiple NFTs in one request.
-     * This endpoint accepts an array of NFT collection addresses and token IDs.
-     * @param chain Chain slug
-     * @param nfts Array of NFTs
-     * @returns IAppraisal or IAppraisalError
-     */
-    public async getPawnAppraisals(chain: IChain, nfts: INFT[]): Promise<(IAppraisal | IAppraisalError)[]> {
-        const options = {
-            method: 'POST',
-            body: JSON.stringify({
-                nfts,
-            }),
-        };
-        return await this.fetchData(`/pawn/${chain}/pricer`, options);
-    }
-
-    /**
-     * Retrieve pricing data for a single PAWN request. This endpoint prices out a plan to post the NFT as collateral and receive a loan in ETH.
-     * @param chain Chain slug
-     * @param address NFT Collection address
-     * @param tokenId NFT id
-     * @param params {weight, totalNumOfPayments, term, wallet }
-     * @returns IPawnPrice
-     */
-    public async getPawnPrice(
-        chain: IChain,
-        address: string,
-        tokenId: string,
-        params: IPawnParams
-    ): Promise<ISDKResponse<IPawnPrice>> {
-        const url = `/pawn/${chain}/pricer/${address}/${tokenId}?${new URLSearchParams({ ...params })}`;
-        return await this.fetchData(url);
-    }
-
-    /**
-     * Retrieve Plan details for an already executed BNPL or PAWN plan.
-     * @param address NFT Collection address
-     * @param tokenId NFT id
-     * @returns IPlan
-     */
-    public async getPlan(address: string, tokenId: string): Promise<ISDKResponse<IPlan>> {
-        return await this.fetchData(`/get-plan/${address}/${tokenId}`);
     }
 
     /**
@@ -129,7 +100,7 @@ export class CyanAPI {
      * @param address User wallet address
      * @returns Array of IPlan
      */
-    public async getUserPlans(address: string): Promise<ISDKResponse<IPlan[]>> {
-        return await this.fetchData(`/users/${address}/plans`);
+    public async getUserPlans(address: string): Promise<IPlan[]> {
+        return await this.fetchData(`/v2/plans?wallet=${address}`);
     }
 }

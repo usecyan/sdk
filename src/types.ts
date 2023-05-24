@@ -1,6 +1,14 @@
 import { BigNumber } from 'ethers';
+import { Web3Provider } from '@ethersproject/providers';
 
-type typeEnum = 'address' | 'uint256' | 'uint8' | 'bytes';
+export type ICyanSDKConstructor = {
+    host: string;
+    apiKey: string;
+    provider: Web3Provider;
+};
+
+export const chains = ['mainnet', 'goerli', 'polygon', 'mumbai', 'arbitrum', 'bsc', 'optimism'] as const;
+export type IChain = typeof chains[keyof typeof chains];
 
 const statusType = {
     Pending: 0,
@@ -9,137 +17,168 @@ const statusType = {
 };
 export type IPlanStatus = typeof statusType[keyof typeof statusType];
 
-interface IAbiFnInput {
-    internalType: typeEnum;
-    name: string;
-    type: typeEnum;
+export enum AutoRepayStatus {
+    Disabled = 0,
+    Active = 1,
 }
 
-interface IAbiFn {
-    inputs: Array<IAbiFnInput>;
-    name: string;
-    outputs?: Array<IAbiFnInput>;
-    stateMutability: 'payable' | 'view' | 'nonpayable';
-    type: 'function';
-}
-
-export interface IAbi {
-    sampleERC721: {
-        approve: IAbiFn;
-        getApproved: IAbiFn;
-    };
-    createBNPLPaymentPlan: IAbiFn;
-    createPAWNPaymentPlan: IAbiFn;
-    getNextPayment: IAbiFn;
-    pay: IAbiFn;
-}
-
-export interface IPlan {
+export type IPlan = {
+    planId: number;
     owner: string;
     totalNumOfPayments: number;
     currentNumOfPayments: number;
     status: IPlanStatus;
     type: 'bnpl' | 'pawn';
-    wNFTContract: string;
-    wNFTTokenId: string;
+    wrapperAddress: string;
     paymentPlanContractAddress: string;
     collectionAddress: string;
-}
-
-export interface IExpectedPaymentPlan {
-    interestFee: BigNumber;
-    serviceFee: BigNumber;
-    downpaymentAmount: BigNumber;
-    totalPaymentAmount: BigNumber;
-    totalFinancingAmount?: BigNumber;
-}
-
-export interface IBnplPrice extends IExpectedPaymentPlan {
-    vaultId: number;
+    autoRepayStatus: AutoRepayStatus;
     tokenId: string;
-    collectionName: string;
-    wrapperAddress: string;
-    signature: string;
-    lastBlockNum: number;
-    totalNumOfPayments: number;
+};
+
+export type FnGetExpectedPlanSync = {
+    params: {
+        amount: BigNumber;
+        downpaymentRate: number;
+        interestRate: number;
+        serviceFeeRate: number;
+        totalNumberOfPayments: number;
+    };
+    result: {
+        downpaymentAmount: BigNumber;
+        totalInterestFee: BigNumber;
+        totalServiceFee: BigNumber;
+        monthlyAmount: BigNumber;
+        totalAmount: BigNumber;
+    };
+};
+
+export enum ItemType {
+    ERC721 = 1,
+    ERC1155 = 2,
+    CryptoPunks = 3,
+}
+
+export type IConfigs = {
+    factoryContracts: {
+        chainId: number;
+        address: string;
+    }[];
+    paymentPlanContracts: {
+        chainId: number;
+        address: string;
+        abiName: 'PaymentPlanV1' | 'PaymentPlanV2';
+        isActive: boolean;
+    }[];
+    supportedCollections: {
+        address: string;
+        currencies: string[];
+    }[];
+};
+
+export type IOption = {
     term: number;
-    image: string;
+    loanRate: number;
+    totalNumberOfPayments: number;
+    interestRate: number;
+    serviceFeeRate: number;
     downpaymentRate: number;
-    interestRate: number;
-    interestRateApr: number;
-    serviceFeeRate: number;
-    price: BigNumber;
-    currency: string;
-    couponDiscountRate: number;
-}
-
-export interface IPawnPrice extends IExpectedPaymentPlan {
-    signature: string;
-    lastBlockNum: number;
-    unlockAmount: BigNumber;
-    totalNumOfPayments: number;
-    appraisalValue: BigNumber;
-    term: number;
-
-    tokenId: string;
-    vaultId: number;
-    wrapperAddress: string;
-    collectionName: string;
-    interestRate: number;
-    interestRateApr: number;
-    serviceFeeRate: number;
-    couponDiscountRate: number;
-}
-
-export interface IPlanInput {
-    address: string;
-    tokenId: string;
-}
-
-export interface ISDKResponse<T> {
-    abi: IAbi;
-    data: T;
-    paymentPlanContractAddress: string;
-}
-
-export interface IPawnParams {
-    term: string;
-    totalNumOfPayments: string;
-    weight: string;
-    wallet: string;
-}
-
-export interface INFT {
-    address: string;
-    tokenId: string;
-}
-
-export interface IAppraisal {
-    address: string;
-    tokenId: string;
-    wrapperAddress: string;
-    collectionName: string;
-    appraisalValue: string;
-}
-
-export interface IAppraisalError {
-    message: 'Error: Project is not supported yet.';
-}
-
-export const chains = ['mainnet', 'goerli', 'polygon', 'mumbai', 'arbitrum', 'bsc', 'optimism'] as const;
-export type IChain = typeof chains[keyof typeof chains];
-
-export interface FnAcceptanceInput {
-    signature: string;
     counterPaidPayments: number;
-    wrapperAddress: string;
-    tokenId: string;
-    term: number;
-    amount: string;
-    totalNumOfPayments: number;
-    interestRate: number;
-    serviceFeeRate: number;
+    downpaymentAmount: BigNumber;
+    monthlyAmount: BigNumber;
+};
+
+export type ICreatePlanParams = {
+    item: {
+        amount: number;
+        tokenId: string;
+        contractAddress: string;
+        cyanVaultAddress: string;
+        itemType: ItemType;
+    };
+    plan: {
+        amount: BigNumber;
+        downPaymentPercent: number;
+        interestRate: number;
+        serviceFeeRate: number;
+        term: number;
+        totalNumberOfPayments: number;
+        counterPaidPayments: number;
+        autoRepayStatus: AutoRepayStatus;
+    };
+    planId: number;
     blockNum: number;
-    pricerSignature: string;
-    wallet: string;
-}
+    signature: string;
+};
+
+export type Errored<T> = T | { error: string };
+
+export type ICreateAcceptance = {
+    planIds: number[];
+    signature: string;
+};
+
+export type IItem = {
+    address: string;
+    tokenId: string;
+    itemType: ItemType;
+    amount: number;
+};
+export type IItemWithPrice = IItem & {
+    price: BigNumber;
+};
+export type IPricerStep1 = {
+    request: {
+        wallet?: string;
+        chain: IChain;
+        currencyAddress: string;
+        items: IItem[];
+    };
+    response: {
+        items: {
+            interestRate: number;
+            price: BigNumber;
+        }[];
+        config: number[][];
+    };
+};
+
+export type IPricerStep2 = {
+    request: {
+        chain: IChain;
+        items: IItem[];
+        currencyAddress: string;
+        option: number[];
+        autoRepayStatus: 0 | 1;
+        wallet: string;
+    };
+    response: {
+        plans: Errored<{
+            planId: number;
+            signature: string;
+            interestRate: number;
+            price: BigNumber;
+            vaultAddress: string;
+            marketName: string;
+        }>[];
+        blockNumber: number;
+    };
+};
+
+export type ISdkPricerStep1 = {
+    result: {
+        items: (IItemWithPrice & { interestRate: number })[];
+        options: IOption[];
+    };
+};
+
+export type ISdkPricerStep2 = {
+    params: {
+        wallet: string;
+        items: IItemWithPrice[];
+        option: IOption;
+        currencyAddress: string;
+        autoRepayStatus: AutoRepayStatus;
+    };
+    result: Errored<ICreatePlanParams & { isChanged: boolean; marketName: string }>[];
+};
