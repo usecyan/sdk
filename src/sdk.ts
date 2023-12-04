@@ -1,5 +1,5 @@
 import { JsonRpcSigner } from '@ethersproject/providers';
-import { BigNumber, constants as ethConsts, ContractTransaction } from 'ethers';
+import { BigNumber, constants as ethConsts, ContractTransaction, ethers } from 'ethers';
 
 import { CyanAPI } from './api';
 import {
@@ -11,6 +11,7 @@ import {
     CyanWallet__factory as CyanWalletFactory,
     ERC721__factory as ERC721Factory,
     ERC20__factory as ERC20Factory,
+    ERC1155__factory as ERC1155Factory,
 } from './contracts';
 import { CyanError, NoWalletError } from './errors';
 
@@ -25,6 +26,9 @@ import {
     IPricerStep2,
     IItem,
     IItemWithPrice,
+    IOffer,
+    ICurrency,
+    INftType,
 } from './types';
 import {
     generateBnplOptions,
@@ -267,20 +271,36 @@ export class CyanSDK {
     }
 
     /**
-     * Approve Payment Plan Contract to spend a specific ERC721 token on behalf of the signer.
-     * @param {string} address - The address of the ERC721 contract.
+     * Approve Payment Plan Contract to spend a specific ERC721 or ERC1155 token on behalf of the signer.
+     * @param {string} address - The address of the ERC721 or ERC1155 contract.
      * @param {string} tokenId - The ID of the token to approve.
      * @returns {Promise<void>} - A Promise that resolves when the transaction is confirmed.
      * @throws {Error} - Throws an error if the PaymentPlan contract is not found or if the transaction fails.
      */
-    public async getApproval(address: string, tokenId: string): Promise<void> {
+    public async getApproval(address: string, tokenId: string, tokenType?: INftType): Promise<void> {
         const paymentPlanContract = await this.getPaymentPlanContract();
-        const erc721Contract = ERC721Factory.connect(address, this.signer);
-        const approvedTo = await erc721Contract.getApproved(tokenId);
+        let tx: ContractTransaction | undefined = undefined;
+        if (tokenType == INftType.ERC1155) {
+            const erc1155Contract = ERC1155Factory.connect(address, this.signer);
+            const isApprovedForAll = await erc1155Contract.isApprovedForAll(
+                this.signer.getAddress(),
+                paymentPlanContract.address
+            );
 
-        if (approvedTo.toLowerCase() === paymentPlanContract.address.toLowerCase()) return;
+            if (isApprovedForAll) return;
+            tx = await erc1155Contract.setApprovalForAll(paymentPlanContract.address, true);
+        } else {
+            const erc721Contract = ERC721Factory.connect(address, this.signer);
+            const isApprovedForAll = await erc721Contract.isApprovedForAll(
+                this.signer.getAddress(),
+                paymentPlanContract.address
+            );
+            if (isApprovedForAll) return;
+            const approvedTo = await erc721Contract.getApproved(tokenId);
 
-        const tx = await erc721Contract.approve(paymentPlanContract.address, tokenId);
+            if (approvedTo.toLowerCase() === paymentPlanContract.address.toLowerCase()) return;
+            tx = await erc721Contract.approve(paymentPlanContract.address, tokenId);
+        }
         await tx.wait();
         return;
     }
@@ -433,7 +453,9 @@ export class CyanSDK {
         if (!isNativeCurrency) {
             await this.checkAndAllowCurrencyForPlan(currencyAddress, BigNumber.from(currentPayment));
         }
-        return await contract.pay(plan.planId, isEarlyRepayment, { value: isNativeCurrency ? currentPayment : 0 });
+        return await contract.pay(plan.planId, isEarlyRepayment, {
+            value: isNativeCurrency ? currentPayment : 0,
+        });
     }
 
     private async _buildStep2Request(args: ISdkPricerStep2['params']): Promise<IPricerStep2['request']> {
@@ -494,6 +516,7 @@ export class CyanSDK {
         const CHAINS: Record<number, IChain> = {
             1: 'mainnet',
             5: 'goerli',
+            11155111: 'sepolia',
             137: 'polygon',
             80001: 'mumbai',
             42161: 'arbitrum',
@@ -501,6 +524,127 @@ export class CyanSDK {
             10: 'optimism',
         };
         return CHAINS[chainId];
+    }
+    public async getTopBid(collectionAddress: string, tokenId?: string): Promise<IOffer[]> {
+        const chain = await this._getChain();
+        const topBids = await this.api.getCollectionTopBid({ chain, collectionAddress, tokenId });
+        return topBids;
+    }
+
+    public async fulfillOffer(plan: IPlan, offer: IOffer): Promise<ContractTransaction> {
+        const chain = await this._getChain();
+        const contract = PaymentPlanV2Factory.connect(plan.paymentPlanContractAddress, this.signer);
+
+        const offerFulfillment = await this.api.getFulfillOffer({
+            chain,
+            planId: plan.planId,
+            offerHash: offer.hash,
+        });
+
+        return await contract.earlyUnwind(plan.planId, offer.price.netAmount.raw, offerFulfillment);
+    }
+
+    public async payBulk(plans: IPlan[], isEarlyPayment: boolean, releaseWallet: string): Promise<ContractTransaction> {
+        const plansWithNextPayment = await Promise.all(
+            plans.map(async plan => {
+                const nextPayment = await this.getPaymentInfo(plan, isEarlyPayment);
+                return {
+                    ...plan,
+                    nextPayment,
+                };
+            })
+        );
+        const totalRepaymentAmountByCurrency = plansWithNextPayment.reduce<{
+            [key: string]: {
+                totalCost: BigNumber;
+                currency: ICurrency;
+                isNativeCurrency: boolean;
+            };
+        }>((acc, cur) => {
+            if (acc[cur.currency.address.toLowerCase()]) {
+                acc[cur.currency.address.toLowerCase()] = {
+                    totalCost: acc[cur.currency.address.toLowerCase()].totalCost.add(
+                        cur.nextPayment?.currentPayment || 0
+                    ),
+                    currency: cur.currency,
+                    isNativeCurrency: cur.currency.address.toLowerCase() === ethers.constants.AddressZero.toLowerCase(),
+                };
+            } else {
+                acc[cur.currency.address.toLowerCase()] = {
+                    totalCost: BigNumber.from(cur.nextPayment?.currentPayment) || BigNumber.from(0),
+                    currency: cur.currency,
+                    isNativeCurrency: cur.currency.address.toLowerCase() === ethers.constants.AddressZero.toLowerCase(),
+                };
+            }
+            return acc;
+        }, {});
+
+        const currencyValues = Object.values(totalRepaymentAmountByCurrency);
+        const cyanWallet = await this.getCyanWallet();
+        const contract = PaymentPlanV2Factory.connect(plans[0].paymentPlanContractAddress, this.signer);
+
+        const bulkTransactions = [];
+        for (const { currency, totalCost, isNativeCurrency } of currencyValues) {
+            if (!isNativeCurrency) {
+                const erc20 = ERC20Factory.connect(currency.address, this.signer);
+                const userAllowance = await erc20.allowance(this.signer.getAddress(), cyanWallet.address);
+                if (userAllowance.lt(totalCost)) {
+                    const encodedAllowanceFnData = erc20.interface.encodeFunctionData('approve', [
+                        cyanWallet.address,
+                        totalCost,
+                    ]);
+                    bulkTransactions.push({
+                        to: currency.address,
+                        data: encodedAllowanceFnData,
+                        value: 0,
+                    });
+                }
+            }
+        }
+        for (const plan of plansWithNextPayment) {
+            const isNativeCurrency = plan.currency.address.toLowerCase() === ethers.constants.AddressZero.toLowerCase();
+            const encodedPayFnData = contract.interface.encodeFunctionData('pay', [plan.planId, isEarlyPayment]);
+
+            bulkTransactions.push({
+                to: plan.paymentPlanContractAddress,
+                data: encodedPayFnData,
+                value: isNativeCurrency ? plan.nextPayment.currentPayment : 0,
+            });
+            const totalNumOfPaymentsLeft = plan.totalNumOfPayments - plan.currentNumOfPayments;
+            if (
+                (totalNumOfPaymentsLeft === 1 || isEarlyPayment) &&
+                cyanWallet.address.toLowerCase() !== releaseWallet.toLowerCase()
+            ) {
+                if (plan.tokenType === INftType.ERC1155) {
+                    const contractIFace = ERC1155Factory.createInterface();
+                    const encodedFnDataTransfer = contractIFace.encodeFunctionData('safeTransferFrom', [
+                        cyanWallet.address,
+                        releaseWallet,
+                        plan.tokenId,
+                        1,
+                        [],
+                    ]);
+                    bulkTransactions.push({
+                        to: plan.collectionAddress,
+                        data: encodedFnDataTransfer,
+                        value: 0,
+                    });
+                } else {
+                    const sampleContractIFace = ERC721Factory.createInterface();
+                    const encodedFnDataTransfer = sampleContractIFace.encodeFunctionData('safeTransferFrom', [
+                        cyanWallet.address,
+                        releaseWallet,
+                        plan.tokenId,
+                    ]);
+                    bulkTransactions.push({
+                        to: plan.collectionAddress,
+                        data: encodedFnDataTransfer,
+                        value: 0,
+                    });
+                }
+            }
+        }
+        return await cyanWallet.executeBatch(bulkTransactions);
     }
 }
 
