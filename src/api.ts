@@ -113,7 +113,7 @@ export class CyanAPI {
         return await this.fetchData(`/v2/plans?wallet=${address}`);
     }
 
-    public async getCollectionTopBid(body: IGetCollectionTopBid['request']): Promise<IOffer[]> {
+    public async getCollectionTopBids(body: IGetCollectionTopBid['request']): Promise<IOffer[]> {
         const { collectionAddress, tokenId, chain } = body;
         const queryParams = new URLSearchParams({
             chain: chain as string,

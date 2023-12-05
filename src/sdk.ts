@@ -427,6 +427,152 @@ export class CyanSDK {
         return await factoryContract.getOrDeployWallet(await this.signer.getAddress());
     }
 
+    /**
+     * Retrieves top bids of the specific collection or token
+     * @param {string} collectionAddress - The collection address
+     * @param {string} tokenId - The token id
+     * @returns {Promise<IOffer[]>} The top bid result
+     */
+    public async getTopBids(collectionAddress: string, tokenId?: string): Promise<IOffer[]> {
+        const chain = await this._getChain();
+        const topBids = await this.api.getCollectionTopBids({ chain, collectionAddress, tokenId });
+        return topBids;
+    }
+
+    /**
+     * Fulfill bid offer of the plan
+     * @param {IPlan} plan - Plan object to sell
+     * @param {IOffer} offer - Offer objects to accept
+     * @returns {Promise<ContractTransaction>}
+     */
+    public async fulfillOffer(plan: IPlan, offer: IOffer): Promise<ContractTransaction> {
+        const chain = await this._getChain();
+        const contract = PaymentPlanV2Factory.connect(plan.paymentPlanContractAddress, this.signer);
+
+        const offerFulfillment = await this.api.getFulfillOffer({
+            chain,
+            planId: plan.planId,
+            offerHash: offer.hash,
+        });
+
+        return await contract.earlyUnwind(plan.planId, offer.price.netAmount.raw, offerFulfillment);
+    }
+
+    /**
+     * Pays the payment for payment plans
+     * @param {Array<IPlan>} plans - The payment plan objects
+     * @param {boolean} isEarlyPayment - The flag to indicate if this is early payment or not
+     * @param {string} releaseWallet - The wallet address to release the token
+     * @returns {Promise<ContractTransaction>} A Promise that resolves to a ContractTransaction object.
+     */
+    public async payBulk(
+        plans: IPlan[],
+        isEarlyPayment: boolean,
+        releaseWallet?: string
+    ): Promise<ContractTransaction> {
+        const plansWithNextPayment = await Promise.all(
+            plans.map(async plan => {
+                const nextPayment = await this.getPaymentInfo(plan, isEarlyPayment);
+                return {
+                    ...plan,
+                    nextPayment,
+                };
+            })
+        );
+        const totalRepaymentAmountByCurrency = plansWithNextPayment.reduce<{
+            [key: string]: {
+                totalCost: BigNumber;
+                currency: ICurrency;
+                isNativeCurrency: boolean;
+            };
+        }>((acc, cur) => {
+            if (acc[cur.currency.address.toLowerCase()]) {
+                acc[cur.currency.address.toLowerCase()] = {
+                    totalCost: acc[cur.currency.address.toLowerCase()].totalCost.add(
+                        cur.nextPayment?.currentPayment || 0
+                    ),
+                    currency: cur.currency,
+                    isNativeCurrency: cur.currency.address.toLowerCase() === ethers.constants.AddressZero.toLowerCase(),
+                };
+            } else {
+                acc[cur.currency.address.toLowerCase()] = {
+                    totalCost: BigNumber.from(cur.nextPayment?.currentPayment) || BigNumber.from(0),
+                    currency: cur.currency,
+                    isNativeCurrency: cur.currency.address.toLowerCase() === ethers.constants.AddressZero.toLowerCase(),
+                };
+            }
+            return acc;
+        }, {});
+
+        const currencyValues = Object.values(totalRepaymentAmountByCurrency);
+        const cyanWallet = await this.getCyanWallet();
+        const contract = PaymentPlanV2Factory.connect(plans[0].paymentPlanContractAddress, this.signer);
+
+        const bulkTransactions = [];
+        for (const { currency, totalCost, isNativeCurrency } of currencyValues) {
+            if (!isNativeCurrency) {
+                const erc20 = ERC20Factory.connect(currency.address, this.signer);
+                const userAllowance = await erc20.allowance(this.signer.getAddress(), cyanWallet.address);
+                if (userAllowance.lt(totalCost)) {
+                    const encodedAllowanceFnData = erc20.interface.encodeFunctionData('approve', [
+                        cyanWallet.address,
+                        totalCost,
+                    ]);
+                    bulkTransactions.push({
+                        to: currency.address,
+                        data: encodedAllowanceFnData,
+                        value: 0,
+                    });
+                }
+            }
+        }
+        for (const plan of plansWithNextPayment) {
+            const isNativeCurrency = plan.currency.address.toLowerCase() === ethers.constants.AddressZero.toLowerCase();
+            const encodedPayFnData = contract.interface.encodeFunctionData('pay', [plan.planId, isEarlyPayment]);
+
+            bulkTransactions.push({
+                to: plan.paymentPlanContractAddress,
+                data: encodedPayFnData,
+                value: isNativeCurrency ? plan.nextPayment.currentPayment : 0,
+            });
+            const totalNumOfPaymentsLeft = plan.totalNumOfPayments - plan.currentNumOfPayments;
+            if (
+                (totalNumOfPaymentsLeft === 1 || isEarlyPayment) &&
+                releaseWallet &&
+                cyanWallet.address.toLowerCase() !== releaseWallet.toLowerCase()
+            ) {
+                if (plan.tokenType === INftType.ERC1155) {
+                    const contractIFace = ERC1155Factory.createInterface();
+                    const encodedFnDataTransfer = contractIFace.encodeFunctionData('safeTransferFrom', [
+                        cyanWallet.address,
+                        releaseWallet,
+                        plan.tokenId,
+                        1,
+                        [],
+                    ]);
+                    bulkTransactions.push({
+                        to: plan.collectionAddress,
+                        data: encodedFnDataTransfer,
+                        value: 0,
+                    });
+                } else {
+                    const sampleContractIFace = ERC721Factory.createInterface();
+                    const encodedFnDataTransfer = sampleContractIFace.encodeFunctionData('safeTransferFrom', [
+                        cyanWallet.address,
+                        releaseWallet,
+                        plan.tokenId,
+                    ]);
+                    bulkTransactions.push({
+                        to: plan.collectionAddress,
+                        data: encodedFnDataTransfer,
+                        value: 0,
+                    });
+                }
+            }
+        }
+        return await cyanWallet.executeBatch(bulkTransactions);
+    }
+
     public async getOrCreateCyanWallet(): Promise<CyanWallet> {
         try {
             return await this.getCyanWallet();
@@ -524,127 +670,6 @@ export class CyanSDK {
             10: 'optimism',
         };
         return CHAINS[chainId];
-    }
-    public async getTopBid(collectionAddress: string, tokenId?: string): Promise<IOffer[]> {
-        const chain = await this._getChain();
-        const topBids = await this.api.getCollectionTopBid({ chain, collectionAddress, tokenId });
-        return topBids;
-    }
-
-    public async fulfillOffer(plan: IPlan, offer: IOffer): Promise<ContractTransaction> {
-        const chain = await this._getChain();
-        const contract = PaymentPlanV2Factory.connect(plan.paymentPlanContractAddress, this.signer);
-
-        const offerFulfillment = await this.api.getFulfillOffer({
-            chain,
-            planId: plan.planId,
-            offerHash: offer.hash,
-        });
-
-        return await contract.earlyUnwind(plan.planId, offer.price.netAmount.raw, offerFulfillment);
-    }
-
-    public async payBulk(plans: IPlan[], isEarlyPayment: boolean, releaseWallet: string): Promise<ContractTransaction> {
-        const plansWithNextPayment = await Promise.all(
-            plans.map(async plan => {
-                const nextPayment = await this.getPaymentInfo(plan, isEarlyPayment);
-                return {
-                    ...plan,
-                    nextPayment,
-                };
-            })
-        );
-        const totalRepaymentAmountByCurrency = plansWithNextPayment.reduce<{
-            [key: string]: {
-                totalCost: BigNumber;
-                currency: ICurrency;
-                isNativeCurrency: boolean;
-            };
-        }>((acc, cur) => {
-            if (acc[cur.currency.address.toLowerCase()]) {
-                acc[cur.currency.address.toLowerCase()] = {
-                    totalCost: acc[cur.currency.address.toLowerCase()].totalCost.add(
-                        cur.nextPayment?.currentPayment || 0
-                    ),
-                    currency: cur.currency,
-                    isNativeCurrency: cur.currency.address.toLowerCase() === ethers.constants.AddressZero.toLowerCase(),
-                };
-            } else {
-                acc[cur.currency.address.toLowerCase()] = {
-                    totalCost: BigNumber.from(cur.nextPayment?.currentPayment) || BigNumber.from(0),
-                    currency: cur.currency,
-                    isNativeCurrency: cur.currency.address.toLowerCase() === ethers.constants.AddressZero.toLowerCase(),
-                };
-            }
-            return acc;
-        }, {});
-
-        const currencyValues = Object.values(totalRepaymentAmountByCurrency);
-        const cyanWallet = await this.getCyanWallet();
-        const contract = PaymentPlanV2Factory.connect(plans[0].paymentPlanContractAddress, this.signer);
-
-        const bulkTransactions = [];
-        for (const { currency, totalCost, isNativeCurrency } of currencyValues) {
-            if (!isNativeCurrency) {
-                const erc20 = ERC20Factory.connect(currency.address, this.signer);
-                const userAllowance = await erc20.allowance(this.signer.getAddress(), cyanWallet.address);
-                if (userAllowance.lt(totalCost)) {
-                    const encodedAllowanceFnData = erc20.interface.encodeFunctionData('approve', [
-                        cyanWallet.address,
-                        totalCost,
-                    ]);
-                    bulkTransactions.push({
-                        to: currency.address,
-                        data: encodedAllowanceFnData,
-                        value: 0,
-                    });
-                }
-            }
-        }
-        for (const plan of plansWithNextPayment) {
-            const isNativeCurrency = plan.currency.address.toLowerCase() === ethers.constants.AddressZero.toLowerCase();
-            const encodedPayFnData = contract.interface.encodeFunctionData('pay', [plan.planId, isEarlyPayment]);
-
-            bulkTransactions.push({
-                to: plan.paymentPlanContractAddress,
-                data: encodedPayFnData,
-                value: isNativeCurrency ? plan.nextPayment.currentPayment : 0,
-            });
-            const totalNumOfPaymentsLeft = plan.totalNumOfPayments - plan.currentNumOfPayments;
-            if (
-                (totalNumOfPaymentsLeft === 1 || isEarlyPayment) &&
-                cyanWallet.address.toLowerCase() !== releaseWallet.toLowerCase()
-            ) {
-                if (plan.tokenType === INftType.ERC1155) {
-                    const contractIFace = ERC1155Factory.createInterface();
-                    const encodedFnDataTransfer = contractIFace.encodeFunctionData('safeTransferFrom', [
-                        cyanWallet.address,
-                        releaseWallet,
-                        plan.tokenId,
-                        1,
-                        [],
-                    ]);
-                    bulkTransactions.push({
-                        to: plan.collectionAddress,
-                        data: encodedFnDataTransfer,
-                        value: 0,
-                    });
-                } else {
-                    const sampleContractIFace = ERC721Factory.createInterface();
-                    const encodedFnDataTransfer = sampleContractIFace.encodeFunctionData('safeTransferFrom', [
-                        cyanWallet.address,
-                        releaseWallet,
-                        plan.tokenId,
-                    ]);
-                    bulkTransactions.push({
-                        to: plan.collectionAddress,
-                        data: encodedFnDataTransfer,
-                        value: 0,
-                    });
-                }
-            }
-        }
-        return await cyanWallet.executeBatch(bulkTransactions);
     }
 }
 
