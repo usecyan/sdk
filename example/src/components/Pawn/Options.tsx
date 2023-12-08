@@ -77,7 +77,7 @@ export const Options = ({ options, onChange }: IProps) => {
                 <p>Downpayment rate: {selectedOption.downpaymentRate / 100}%</p>
                 <p>Downpayment amount: {ethers.utils.formatEther(selectedOption.downpaymentAmount)} ETH</p>
                 <p>Monthly amount: {ethers.utils.formatEther(selectedOption.monthlyAmount)} ETH</p>
-                <p>Service fee rate: {ethers.utils.formatEther(selectedOption.serviceFeeRate / 100)}%</p>
+                <p>Service fee rate: {ethers.utils.formatEther(selectedOption.serviceFeeRate)}%</p>
                 <p>Duration: {selectedOption.term * selectedOption.totalNumberOfPayments} seconds</p>
                 <p>Loan rate: {selectedOption.loanRate / 100}%</p>
             </div>

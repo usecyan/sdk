@@ -29,12 +29,6 @@ export type ICurrency = {
     decimal: number;
 };
 
-export enum INftType {
-    ERC721 = 1,
-    ERC1155 = 2,
-    CryptoPunks = 3,
-}
-
 export type IPlan = {
     planId: number;
     owner: string;
@@ -48,7 +42,7 @@ export type IPlan = {
     autoRepayStatus: AutoRepayStatus;
     tokenId: string;
     currency: ICurrency;
-    tokenType: INftType;
+    tokenType: ItemType;
 };
 
 export type FnGetExpectedPlanSync = {
@@ -88,6 +82,10 @@ export type IConfigs = {
     supportedCollections: {
         address: string;
         currencies: string[];
+    }[];
+    cyanConduitAddresses: {
+        chainId: number;
+        address: string;
     }[];
 };
 

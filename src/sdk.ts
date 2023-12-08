@@ -28,7 +28,7 @@ import {
     IItemWithPrice,
     IOffer,
     ICurrency,
-    INftType,
+    ItemType,
 } from './types';
 import {
     generateBnplOptions,
@@ -146,8 +146,8 @@ export class CyanSDK {
                 itemType: item.itemType,
                 amount: item.amount,
                 tokenId: item.tokenId,
-                contractAddress: item.contractAddress,
-                cyanVaultAddress: item.cyanVaultAddress,
+                contractAddress: item.contractAddress.toLowerCase(),
+                cyanVaultAddress: item.cyanVaultAddress.toLowerCase(),
             },
             plan: {
                 amount: plan.amount,
@@ -277,29 +277,37 @@ export class CyanSDK {
      * @returns {Promise<void>} - A Promise that resolves when the transaction is confirmed.
      * @throws {Error} - Throws an error if the PaymentPlan contract is not found or if the transaction fails.
      */
-    public async getApproval(address: string, tokenId: string, tokenType?: INftType): Promise<void> {
+    public async getApproval(address: string, tokenId: string, tokenType: ItemType = ItemType.ERC721): Promise<void> {
+        const cyanWallet = await this.getCyanWallet();
+        const chainId = await this.signer.getChainId();
         const paymentPlanContract = await this.getPaymentPlanContract();
         let tx: ContractTransaction | undefined = undefined;
-        if (tokenType == INftType.ERC1155) {
-            const erc1155Contract = ERC1155Factory.connect(address, this.signer);
-            const isApprovedForAll = await erc1155Contract.isApprovedForAll(
-                this.signer.getAddress(),
-                paymentPlanContract.address
-            );
+        const cyanConduitAddress = this.configs.cyanConduitAddresses.filter(
+            cyanConduit => cyanConduit.chainId === chainId
+        );
+        const approvalAddress =
+            cyanConduitAddress.length > 0 ? cyanConduitAddress[0].address : paymentPlanContract.address;
 
+        if (tokenType === ItemType.ERC1155) {
+            const erc1155Contract = ERC1155Factory.connect(address, this.signer);
+            const balanceOf = await erc1155Contract.balanceOf(this.signer.getAddress(), tokenId);
+            if (balanceOf.eq(0)) return;
+
+            const isApprovedForAll = await erc1155Contract.isApprovedForAll(this.signer.getAddress(), approvalAddress);
             if (isApprovedForAll) return;
-            tx = await erc1155Contract.setApprovalForAll(paymentPlanContract.address, true);
-        } else {
+            tx = await erc1155Contract.setApprovalForAll(approvalAddress, true);
+        } else if (tokenType === ItemType.ERC721) {
             const erc721Contract = ERC721Factory.connect(address, this.signer);
-            const isApprovedForAll = await erc721Contract.isApprovedForAll(
-                this.signer.getAddress(),
-                paymentPlanContract.address
-            );
+            const ownerOf = await erc721Contract.ownerOf(tokenId);
+            if (ownerOf.toLowerCase() === cyanWallet.address.toLowerCase()) return;
+            const isApprovedForAll = await erc721Contract.isApprovedForAll(this.signer.getAddress(), approvalAddress);
             if (isApprovedForAll) return;
             const approvedTo = await erc721Contract.getApproved(tokenId);
 
-            if (approvedTo.toLowerCase() === paymentPlanContract.address.toLowerCase()) return;
-            tx = await erc721Contract.approve(paymentPlanContract.address, tokenId);
+            if (approvedTo.toLowerCase() === approvalAddress.toLowerCase()) return;
+            tx = await erc721Contract.approve(approvalAddress, tokenId);
+        } else {
+            throw new Error(`Not supported token type ${tokenType}`);
         }
         await tx.wait();
         return;
@@ -541,7 +549,7 @@ export class CyanSDK {
                 releaseWallet &&
                 cyanWallet.address.toLowerCase() !== releaseWallet.toLowerCase()
             ) {
-                if (plan.tokenType === INftType.ERC1155) {
+                if (plan.tokenType === ItemType.ERC1155) {
                     const contractIFace = ERC1155Factory.createInterface();
                     const encodedFnDataTransfer = contractIFace.encodeFunctionData('safeTransferFrom', [
                         cyanWallet.address,

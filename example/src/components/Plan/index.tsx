@@ -26,7 +26,7 @@ export const GetUserPlans = React.memo(({ account, cyan }: { cyan: Cyan; account
             <h4 className="text-xl mb-3">User Plans</h4>
             <p>You have {plans.length}</p>
             <div>
-                {plans.map((plan) => (
+                {plans.map(plan => (
                     <div key={plan.planId} className="plan-card">
                         <p>Plan ID: {plan.planId}</p>
                         <p>Collection address: {plan.collectionAddress}</p>
