@@ -41,6 +41,7 @@ export type IPlan = {
     collectionAddress: string;
     autoRepayStatus: AutoRepayStatus;
     tokenId: string;
+    tokenAmount: number;
     currency: ICurrency;
     tokenType: ItemType;
 };
