@@ -79,6 +79,181 @@ export declare namespace CyanPaymentPlanV2 {
   };
 }
 
+export declare namespace ISeaport {
+  export type OfferItemStruct = {
+    itemType: PromiseOrValue<BigNumberish>;
+    token: PromiseOrValue<string>;
+    identifierOrCriteria: PromiseOrValue<BigNumberish>;
+    startAmount: PromiseOrValue<BigNumberish>;
+    endAmount: PromiseOrValue<BigNumberish>;
+  };
+
+  export type OfferItemStructOutput = [
+    number,
+    string,
+    BigNumber,
+    BigNumber,
+    BigNumber
+  ] & {
+    itemType: number;
+    token: string;
+    identifierOrCriteria: BigNumber;
+    startAmount: BigNumber;
+    endAmount: BigNumber;
+  };
+
+  export type ConsiderationItemStruct = {
+    itemType: PromiseOrValue<BigNumberish>;
+    token: PromiseOrValue<string>;
+    identifierOrCriteria: PromiseOrValue<BigNumberish>;
+    startAmount: PromiseOrValue<BigNumberish>;
+    endAmount: PromiseOrValue<BigNumberish>;
+    recipient: PromiseOrValue<string>;
+  };
+
+  export type ConsiderationItemStructOutput = [
+    number,
+    string,
+    BigNumber,
+    BigNumber,
+    BigNumber,
+    string
+  ] & {
+    itemType: number;
+    token: string;
+    identifierOrCriteria: BigNumber;
+    startAmount: BigNumber;
+    endAmount: BigNumber;
+    recipient: string;
+  };
+
+  export type OrderParametersStruct = {
+    offerer: PromiseOrValue<string>;
+    zone: PromiseOrValue<string>;
+    offer: ISeaport.OfferItemStruct[];
+    consideration: ISeaport.ConsiderationItemStruct[];
+    orderType: PromiseOrValue<BigNumberish>;
+    startTime: PromiseOrValue<BigNumberish>;
+    endTime: PromiseOrValue<BigNumberish>;
+    zoneHash: PromiseOrValue<BytesLike>;
+    salt: PromiseOrValue<BigNumberish>;
+    conduitKey: PromiseOrValue<BytesLike>;
+    totalOriginalConsiderationItems: PromiseOrValue<BigNumberish>;
+  };
+
+  export type OrderParametersStructOutput = [
+    string,
+    string,
+    ISeaport.OfferItemStructOutput[],
+    ISeaport.ConsiderationItemStructOutput[],
+    number,
+    BigNumber,
+    BigNumber,
+    string,
+    BigNumber,
+    string,
+    BigNumber
+  ] & {
+    offerer: string;
+    zone: string;
+    offer: ISeaport.OfferItemStructOutput[];
+    consideration: ISeaport.ConsiderationItemStructOutput[];
+    orderType: number;
+    startTime: BigNumber;
+    endTime: BigNumber;
+    zoneHash: string;
+    salt: BigNumber;
+    conduitKey: string;
+    totalOriginalConsiderationItems: BigNumber;
+  };
+
+  export type AdvancedOrderStruct = {
+    parameters: ISeaport.OrderParametersStruct;
+    numerator: PromiseOrValue<BigNumberish>;
+    denominator: PromiseOrValue<BigNumberish>;
+    signature: PromiseOrValue<BytesLike>;
+    extraData: PromiseOrValue<BytesLike>;
+  };
+
+  export type AdvancedOrderStructOutput = [
+    ISeaport.OrderParametersStructOutput,
+    BigNumber,
+    BigNumber,
+    string,
+    string
+  ] & {
+    parameters: ISeaport.OrderParametersStructOutput;
+    numerator: BigNumber;
+    denominator: BigNumber;
+    signature: string;
+    extraData: string;
+  };
+
+  export type CriteriaResolverStruct = {
+    orderIndex: PromiseOrValue<BigNumberish>;
+    side: PromiseOrValue<BigNumberish>;
+    index: PromiseOrValue<BigNumberish>;
+    identifier: PromiseOrValue<BigNumberish>;
+    criteriaProof: PromiseOrValue<BytesLike>[];
+  };
+
+  export type CriteriaResolverStructOutput = [
+    BigNumber,
+    number,
+    BigNumber,
+    BigNumber,
+    string[]
+  ] & {
+    orderIndex: BigNumber;
+    side: number;
+    index: BigNumber;
+    identifier: BigNumber;
+    criteriaProof: string[];
+  };
+
+  export type FulfillmentComponentStruct = {
+    orderIndex: PromiseOrValue<BigNumberish>;
+    itemIndex: PromiseOrValue<BigNumberish>;
+  };
+
+  export type FulfillmentComponentStructOutput = [BigNumber, BigNumber] & {
+    orderIndex: BigNumber;
+    itemIndex: BigNumber;
+  };
+
+  export type FulfillmentStruct = {
+    offerComponents: ISeaport.FulfillmentComponentStruct[];
+    considerationComponents: ISeaport.FulfillmentComponentStruct[];
+  };
+
+  export type FulfillmentStructOutput = [
+    ISeaport.FulfillmentComponentStructOutput[],
+    ISeaport.FulfillmentComponentStructOutput[]
+  ] & {
+    offerComponents: ISeaport.FulfillmentComponentStructOutput[];
+    considerationComponents: ISeaport.FulfillmentComponentStructOutput[];
+  };
+
+  export type OfferDataStruct = {
+    orders: ISeaport.AdvancedOrderStruct[];
+    criteriaResolvers: ISeaport.CriteriaResolverStruct[];
+    fulfillments: ISeaport.FulfillmentStruct[];
+    recipient: PromiseOrValue<string>;
+  };
+
+  export type OfferDataStructOutput = [
+    ISeaport.AdvancedOrderStructOutput[],
+    ISeaport.CriteriaResolverStructOutput[],
+    ISeaport.FulfillmentStructOutput[],
+    string
+  ] & {
+    orders: ISeaport.AdvancedOrderStructOutput[];
+    criteriaResolvers: ISeaport.CriteriaResolverStructOutput[];
+    fulfillments: ISeaport.FulfillmentStructOutput[];
+    recipient: string;
+  };
+}
+
 export interface PaymentPlanV2Interface extends utils.Interface {
   functions: {
     "createPawn((uint256,uint256,address,address,uint8),(uint256,uint32,uint32,uint32,uint32,uint8,uint8,uint8),uint256,uint256,bytes)": FunctionFragment;
@@ -87,6 +262,7 @@ export interface PaymentPlanV2Interface extends utils.Interface {
     "getExpectedPlan((uint256,uint32,uint32,uint32,uint32,uint8,uint8,uint8))": FunctionFragment;
     "getPaymentInfoByPlanId(uint256,bool)": FunctionFragment;
     "getCurrencyAddressByPlanId(uint256)": FunctionFragment;
+    "earlyUnwind(uint256,uint256,(((address,address,(uint8,address,uint256,uint256,uint256)[],(uint8,address,uint256,uint256,uint256,address)[],uint8,uint256,uint256,bytes32,uint256,bytes32,uint256),uint120,uint120,bytes,bytes)[],(uint256,uint8,uint256,uint256,bytes32[])[],((uint256,uint256)[],(uint256,uint256)[])[],address))": FunctionFragment;
   };
 
   getFunction(
@@ -97,6 +273,7 @@ export interface PaymentPlanV2Interface extends utils.Interface {
       | "getExpectedPlan"
       | "getPaymentInfoByPlanId"
       | "getCurrencyAddressByPlanId"
+      | "earlyUnwind"
   ): FunctionFragment;
 
   encodeFunctionData(
@@ -135,6 +312,14 @@ export interface PaymentPlanV2Interface extends utils.Interface {
     functionFragment: "getCurrencyAddressByPlanId",
     values: [PromiseOrValue<BigNumberish>]
   ): string;
+  encodeFunctionData(
+    functionFragment: "earlyUnwind",
+    values: [
+      PromiseOrValue<BigNumberish>,
+      PromiseOrValue<BigNumberish>,
+      ISeaport.OfferDataStruct
+    ]
+  ): string;
 
   decodeFunctionResult(functionFragment: "createPawn", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "createBNPL", data: BytesLike): Result;
@@ -149,6 +334,10 @@ export interface PaymentPlanV2Interface extends utils.Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "getCurrencyAddressByPlanId",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "earlyUnwind",
     data: BytesLike
   ): Result;
 
@@ -221,6 +410,13 @@ export interface PaymentPlanV2 extends BaseContract {
       planId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<[string]>;
+
+    earlyUnwind(
+      planId: PromiseOrValue<BigNumberish>,
+      sellPrice: PromiseOrValue<BigNumberish>,
+      offer: ISeaport.OfferDataStruct,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
   };
 
   createPawn(
@@ -263,6 +459,13 @@ export interface PaymentPlanV2 extends BaseContract {
     overrides?: CallOverrides
   ): Promise<string>;
 
+  earlyUnwind(
+    planId: PromiseOrValue<BigNumberish>,
+    sellPrice: PromiseOrValue<BigNumberish>,
+    offer: ISeaport.OfferDataStruct,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
   callStatic: {
     createPawn(
       item: CyanPaymentPlanV2.ItemStruct,
@@ -303,6 +506,13 @@ export interface PaymentPlanV2 extends BaseContract {
       planId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<string>;
+
+    earlyUnwind(
+      planId: PromiseOrValue<BigNumberish>,
+      sellPrice: PromiseOrValue<BigNumberish>,
+      offer: ISeaport.OfferDataStruct,
+      overrides?: CallOverrides
+    ): Promise<void>;
   };
 
   filters: {};
@@ -347,6 +557,13 @@ export interface PaymentPlanV2 extends BaseContract {
       planId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
+
+    earlyUnwind(
+      planId: PromiseOrValue<BigNumberish>,
+      sellPrice: PromiseOrValue<BigNumberish>,
+      offer: ISeaport.OfferDataStruct,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
   };
 
   populateTransaction: {
@@ -388,6 +605,13 @@ export interface PaymentPlanV2 extends BaseContract {
     getCurrencyAddressByPlanId(
       planId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    earlyUnwind(
+      planId: PromiseOrValue<BigNumberish>,
+      sellPrice: PromiseOrValue<BigNumberish>,
+      offer: ISeaport.OfferDataStruct,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
   };
 }

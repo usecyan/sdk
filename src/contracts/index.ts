@@ -3,12 +3,14 @@
 /* eslint-disable */
 export type { CyanFactory } from "./CyanFactory";
 export type { CyanWallet } from "./CyanWallet";
+export type { ERC1155 } from "./ERC1155";
 export type { ERC20 } from "./ERC20";
 export type { ERC721 } from "./ERC721";
 export type { PaymentPlanV2 } from "./PaymentPlanV2";
 export * as factories from "./factories";
 export { CyanFactory__factory } from "./factories/CyanFactory__factory";
 export { CyanWallet__factory } from "./factories/CyanWallet__factory";
+export { ERC1155__factory } from "./factories/ERC1155__factory";
 export { ERC20__factory } from "./factories/ERC20__factory";
 export { ERC721__factory } from "./factories/ERC721__factory";
 export { PaymentPlanV2__factory } from "./factories/PaymentPlanV2__factory";

@@ -79,7 +79,7 @@ export const CreatePawn = React.memo(({ provider, cyan }: IProps) => {
         setLoading(true);
         try {
             for (const plan of pricerStep2Data.filter(utils.isNonErrored)) {
-                await cyan.getApproval(plan.item.contractAddress, plan.item.tokenId);
+                await cyan.getApproval(plan.item.contractAddress, plan.item.tokenId, plan.item.itemType);
             }
             setApproved(true);
         } catch (e) {
@@ -109,10 +109,10 @@ export const CreatePawn = React.memo(({ provider, cyan }: IProps) => {
                     value={currencyAddress}
                     className="input flex-1 mx-2 mb-1"
                     placeholder="Currency address"
-                    onChange={(e) => setCurrencyAddress(e.target.value)}
+                    onChange={e => setCurrencyAddress(e.target.value)}
                     required
                 />
-                {items.map((item) => {
+                {items.map(item => {
                     return (
                         <div key={`${item.address}:${item.tokenId}`} className="border border-black p-1 mb-1">
                             <div>Collection address: {item.address}</div>
@@ -127,7 +127,7 @@ export const CreatePawn = React.memo(({ provider, cyan }: IProps) => {
             {pricerStep2Data && (
                 <div className="bg-slate-300 p-1 border border-black">
                     <b>Pricer Step 2 Result:</b>
-                    {pricerStep2Data.filter(utils.isNonErrored).map((paymentPlan) => (
+                    {pricerStep2Data.filter(utils.isNonErrored).map(paymentPlan => (
                         <div key={paymentPlan.planId}>
                             <p>Plan ID: {paymentPlan.planId}</p>
                             <p>Interest Rate: {paymentPlan.plan.interestRate / 100}%</p>

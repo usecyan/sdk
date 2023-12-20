@@ -1,5 +1,14 @@
 import { BigNumber } from 'ethers';
-import { IConfigs, ICreateAcceptance, IPlan, IPricerStep1, IPricerStep2 } from './types';
+import {
+    IConfigs,
+    ICreateAcceptance,
+    IFulfillOffer,
+    IGetCollectionTopBid,
+    IOffer,
+    IPlan,
+    IPricerStep1,
+    IPricerStep2,
+} from './types';
 import { HttpError } from './errors';
 
 export class CyanAPI {
@@ -102,5 +111,23 @@ export class CyanAPI {
      */
     public async getUserPlans(address: string): Promise<IPlan[]> {
         return await this.fetchData(`/v2/plans?wallet=${address}`);
+    }
+
+    public async getCollectionTopBids(body: IGetCollectionTopBid['request']): Promise<IOffer[]> {
+        const { collectionAddress, tokenId, chain } = body;
+        const queryParams = new URLSearchParams({
+            chain: chain as string,
+        });
+        if (tokenId) queryParams.append('tokenId', tokenId);
+        return await this.fetchData(`/v2/collections/${collectionAddress}/top-bid?${queryParams}`);
+    }
+
+    public async getFulfillOffer(body: IFulfillOffer['request']): Promise<IFulfillOffer['result']> {
+        const { planId, chain, offerHash } = body;
+        const queryParams = new URLSearchParams({
+            chain: chain as string,
+            offerHash,
+        });
+        return await this.fetchData(`/v2/plans/${planId}/fulfill-offer?${queryParams}`);
     }
 }

@@ -1,4 +1,4 @@
-import { BigNumber } from 'ethers';
+import { BigNumber, BigNumberish } from 'ethers';
 import { Web3Provider } from '@ethersproject/providers';
 
 export type ICyanSDKConstructor = {
@@ -7,7 +7,7 @@ export type ICyanSDKConstructor = {
     provider: Web3Provider;
 };
 
-export const chains = ['mainnet', 'goerli', 'polygon', 'mumbai', 'arbitrum', 'bsc', 'optimism'] as const;
+export const chains = ['mainnet', 'goerli', 'sepolia', 'polygon', 'mumbai', 'arbitrum', 'bsc', 'optimism'] as const;
 export type IChain = typeof chains[keyof typeof chains];
 
 const statusType = {
@@ -19,8 +19,15 @@ export type IPlanStatus = typeof statusType[keyof typeof statusType];
 
 export enum AutoRepayStatus {
     Disabled = 0,
-    Active = 1,
+    FromCyanWallet = 1,
+    FromMainWallet = 2,
 }
+
+export type ICurrency = {
+    symbol: string;
+    address: string;
+    decimal: number;
+};
 
 export type IPlan = {
     planId: number;
@@ -34,6 +41,9 @@ export type IPlan = {
     collectionAddress: string;
     autoRepayStatus: AutoRepayStatus;
     tokenId: string;
+    tokenAmount: number;
+    currency: ICurrency;
+    tokenType: ItemType;
 };
 
 export type FnGetExpectedPlanSync = {
@@ -73,6 +83,10 @@ export type IConfigs = {
     supportedCollections: {
         address: string;
         currencies: string[];
+    }[];
+    cyanConduitAddresses: {
+        chainId: number;
+        address: string;
     }[];
 };
 
@@ -149,7 +163,7 @@ export type IPricerStep2 = {
         items: IItem[];
         currencyAddress: string;
         option: number[];
-        autoRepayStatus: 0 | 1;
+        autoRepayStatus: AutoRepayStatus;
         wallet: string;
     };
     response: {
@@ -181,4 +195,101 @@ export type ISdkPricerStep2 = {
         autoRepayStatus: AutoRepayStatus;
     };
     result: Errored<ICreatePlanParams & { isChanged: boolean; marketName: string }>[];
+};
+
+export type IOffer = {
+    hash: string;
+    contract: string;
+    price: {
+        currency: {
+            contract: string;
+            decimals: number;
+            symbol: string;
+            name: string;
+        };
+        amount: {
+            raw: string;
+            decimal: number;
+        };
+        netAmount: {
+            raw: string;
+            decimal: number;
+        };
+    };
+    validUntil: number;
+};
+
+export type IGetCollectionTopBid = {
+    request: { chain: IChain; tokenId?: string; collectionAddress: string };
+    result: IOffer[];
+};
+
+enum OrderType {
+    FULL_OPEN = 0, // No partial fills, anyone can execute
+    PARTIAL_OPEN = 1, // Partial fills supported, anyone can execute
+    FULL_RESTRICTED = 2, // No partial fills, only offerer or zone can execute
+    PARTIAL_RESTRICTED = 3, // Partial fills supported, only offerer or zone can execute
+}
+
+type OfferItem = {
+    itemType: ItemType;
+    token: string;
+    identifierOrCriteria: string;
+    startAmount: string;
+    endAmount: string;
+};
+type ConsiderationItem = {
+    itemType: ItemType;
+    token: string;
+    identifierOrCriteria: string;
+    startAmount: string;
+    endAmount: string;
+    recipient: string;
+};
+
+type OrderParameters = {
+    offerer: string;
+    zone: string;
+    orderType: OrderType;
+    startTime: BigNumberish;
+    endTime: BigNumberish;
+    zoneHash: string;
+    salt: string;
+    offer: OfferItem[];
+    consideration: ConsiderationItem[];
+    totalOriginalConsiderationItems: BigNumberish;
+    conduitKey: string;
+};
+type MatchOrdersFulfillmentComponent = {
+    orderIndex: number;
+    itemIndex: number;
+};
+
+export type IFulfillOffer = {
+    request: {
+        chain: IChain;
+        planId: number;
+        offerHash: string;
+    };
+    result: {
+        orders: {
+            parameters: OrderParameters;
+            signature: string;
+            extraData: string;
+            denominator: number;
+            numerator: number;
+        }[];
+        fulfillments: {
+            offerComponents: MatchOrdersFulfillmentComponent[];
+            considerationComponents: MatchOrdersFulfillmentComponent[];
+        }[];
+        criteriaResolvers: {
+            orderIndex: string;
+            side: number;
+            index: string;
+            identifier: string;
+            criteriaProof: string[];
+        }[];
+        recipient: string;
+    };
 };
