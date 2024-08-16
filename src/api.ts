@@ -3,6 +3,7 @@ import {
     IConfigs,
     ICreateAcceptance,
     IFulfillOffer,
+    IGetCollectionsMaxLtvs,
     IGetCollectionTopBid,
     IOffer,
     IPlan,
@@ -34,6 +35,17 @@ export class CyanAPI {
 
     public async getConfigs(): Promise<IConfigs> {
         return await this.fetchData('/v2/configs');
+    }
+
+    /**
+     * Retrieve the maximum LTVs for the given plan type and chain across all supported collections
+     */
+    public async getMaxLtvs(args: IGetCollectionsMaxLtvs['params']): Promise<IGetCollectionsMaxLtvs['result']> {
+        const { planType, chain } = args;
+        const queryParams = new URLSearchParams({
+            planType: planType.toString(),
+        });
+        return await this.fetchData(`/v2/collections/${chain}/max-ltv?${queryParams}`);
     }
 
     /**

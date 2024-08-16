@@ -29,6 +29,8 @@ import {
     IOffer,
     ICurrency,
     ItemType,
+    IGetCollectionsMaxLtvs,
+    PlanTypes,
 } from './types';
 import {
     generateBnplOptions,
@@ -439,6 +441,16 @@ export class CyanSDK {
         const chain = await this._getChain();
         const topBids = await this.api.getCollectionTopBids({ chain, collectionAddress, tokenId });
         return topBids;
+    }
+
+    /**
+     * Retrieve the maximum LTVs for the given plan type across all supported collections
+     * @param {string} planType - The plan type
+     * @returns {Promise<IGetCollectionsMaxLtvs['result']>} The maximum LTVs by currency address
+     */
+    public async getMaxLtvs(planType: 'bnpl' | 'pawn'): Promise<IGetCollectionsMaxLtvs['result']> {
+        const chain = await this._getChain();
+        return await this.api.getMaxLtvs({ chain, planType: PlanTypes[planType] });
     }
 
     /**
