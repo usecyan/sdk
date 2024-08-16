@@ -10,6 +10,30 @@ export type ICyanSDKConstructor = {
 export const chains = ['mainnet', 'goerli', 'sepolia', 'polygon', 'mumbai', 'arbitrum', 'bsc', 'optimism'] as const;
 export type IChain = typeof chains[keyof typeof chains];
 
+export const PlanTypes = {
+    bnpl: 0,
+    pawn: 1,
+} as const;
+export type IPlanType = typeof PlanTypes[keyof typeof PlanTypes];
+
+type IGetCollectionsMaxLtvsParams = {
+    planType: IPlanType;
+    chain: IChain;
+};
+
+type ICollectionsWithMaxLtvs = {
+    address: string;
+    maxLtvs: {
+        currencyAddress: string;
+        maxLtv: number;
+    }[];
+}[];
+
+export type IGetCollectionsMaxLtvs = {
+    params: IGetCollectionsMaxLtvsParams;
+    result: ICollectionsWithMaxLtvs;
+};
+
 const statusType = {
     Pending: 0,
     Funded: 1,
