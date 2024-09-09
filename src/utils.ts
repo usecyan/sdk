@@ -1,7 +1,15 @@
 import { BigNumber, constants as ethConsts } from 'ethers';
 import { TypedDataDomain, TypedDataField } from '@ethersproject/abstract-signer';
 
-import { Errored, FnGetExpectedPlanSync, ICreatePlanParams, IOption, IPricerStep1 } from './types';
+import {
+    Errored,
+    FnGetExpectedPlanSync,
+    ICreatePlanParams,
+    IItem,
+    IItemWithPrice,
+    IPricerStep1,
+    ISdkPricerStep1,
+} from './types';
 import { PaymentPlanV2__factory as PaymentPlanV2Factory } from './contracts';
 
 export const createHashSHA256 = async (message: string): Promise<string> => {
@@ -119,36 +127,59 @@ export const generateNonce = async (paymentPlans: ICreatePlanParams[]) => {
     return await createHashSHA256(paymentPlanString);
 };
 
-export const generateBnplOptions = (result: IPricerStep1['response']): IOption[] => generateOptions('bnpl', result);
-export const generatePawnOptions = (result: IPricerStep1['response']): IOption[] => generateOptions('pawn', result);
-const generateOptions = (type: 'bnpl' | 'pawn', result: IPricerStep1['response']): IOption[] => {
-    const { config, items } = result;
+export const generateBnplOptions = (
+    result: IPricerStep1['response'],
+    items: Array<IItem | IItemWithPrice>
+): ISdkPricerStep1['result']['items'] => generateOptions('bnpl', result, items);
+export const generatePawnOptions = (
+    result: IPricerStep1['response'],
+    items: Array<IItem | IItemWithPrice>
+): ISdkPricerStep1['result']['items'] => generateOptions('pawn', result, items);
+const generateOptions = (
+    type: 'bnpl' | 'pawn',
+    result: IPricerStep1['response'],
+    items: Array<IItem | IItemWithPrice>
+): ISdkPricerStep1['result']['items'] => {
+    const { items: pricedItems } = result;
+    const { totalInterestRate, totalPrice } = calculateTotals(
+        pricedItems.map(({ price, interestRate }) => ({ price: BigNumber.from(price), interestRate }))
+    );
+    const itemsWithOptions = pricedItems.map((pricedResult, index) => {
+        const item = items[index];
+        const options = pricedResult.config.map(
+            ([term, totalNumberOfPayments, serviceFeeRate, loanRate, multiplier, divider, adder]) => {
+                const downpaymentRate = type === 'bnpl' ? 100_00 - loanRate : 0;
+                const counterPaidPayments = type === 'bnpl' ? 1 : 0;
 
-    const { totalInterestRate, totalPrice } = calculateTotals(items);
-    return config.map(([term, totalNumberOfPayments, serviceFeeRate, loanRate, multiplier, divider, adder]) => {
-        const downpaymentRate = type === 'bnpl' ? 100_00 - loanRate : 0;
-        const counterPaidPayments = type === 'bnpl' ? 1 : 0;
-
-        const interestRate = Math.ceil((totalInterestRate * multiplier) / divider) + adder;
-        const { downpaymentAmount, monthlyAmount } = getExpectedPlanSync({
-            amount: totalPrice.mul(downpaymentRate + loanRate).div(100_00),
-            downpaymentRate,
-            interestRate,
-            serviceFeeRate,
-            totalNumberOfPayments,
-        });
+                const interestRate = Math.ceil((totalInterestRate * multiplier) / divider) + adder;
+                const { downpaymentAmount, monthlyAmount } = getExpectedPlanSync({
+                    amount: totalPrice.mul(downpaymentRate + loanRate).div(100_00),
+                    downpaymentRate,
+                    interestRate,
+                    serviceFeeRate,
+                    totalNumberOfPayments,
+                });
+                return {
+                    term,
+                    totalNumberOfPayments,
+                    interestRate,
+                    downpaymentRate,
+                    counterPaidPayments,
+                    downpaymentAmount,
+                    monthlyAmount,
+                    serviceFeeRate,
+                    loanRate,
+                };
+            }
+        );
         return {
-            term,
-            totalNumberOfPayments,
-            interestRate,
-            downpaymentRate,
-            counterPaidPayments,
-            downpaymentAmount,
-            monthlyAmount,
-            serviceFeeRate,
-            loanRate,
+            ...item,
+            interestRate: pricedResult.interestRate,
+            price: BigNumber.from(pricedResult.price),
+            options,
         };
     });
+    return itemsWithOptions;
 };
 
 export const getPaymentPlanError = (error: any): string => {

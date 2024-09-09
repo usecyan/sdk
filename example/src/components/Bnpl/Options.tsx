@@ -3,20 +3,24 @@ import { IOption } from '@usecyan/sdk';
 import { ethers } from 'ethers';
 
 type IProps = {
+    item: { address: string; tokenId: string };
+    value?: { loanRate: number; duration: number };
     options: IOption[];
     onChange: (p: IOption) => void;
 };
 
-export const Options = ({ options, onChange }: IProps) => {
-    const loanRates = new Set<number>(options.map((o) => o.loanRate));
-    const durations = new Set<number>(options.map((o) => o.term * o.totalNumberOfPayments));
+export const Options = ({ options, onChange, value, item }: IProps) => {
+    const loanRates = new Set<number>(options.map(o => o.loanRate));
+    const durations = new Set<number>(options.map(o => o.term * o.totalNumberOfPayments));
 
     const [selected, setSelected] = useState<{ loanRate: number; duration: number }>({
-        loanRate: loanRates.values().next().value,
-        duration: durations.values().next().value,
+        loanRate: value?.loanRate ?? loanRates.values().next().value,
+        duration: value?.duration ?? durations.values().next().value,
     });
 
-    const selectedOption = options.find((o) => o.loanRate === selected.loanRate && o.term * o.totalNumberOfPayments === selected.duration);
+    const selectedOption = options.find(
+        o => o.loanRate === selected.loanRate && o.term * o.totalNumberOfPayments === selected.duration
+    );
 
     useEffect(() => {
         if (!selectedOption) return;
@@ -24,24 +28,29 @@ export const Options = ({ options, onChange }: IProps) => {
         onChange(selectedOption);
     }, [selected]);
 
-    const onSelect = (o: {duration?: number, loanRate?: number} ) => {
-        setSelected((oldSelection) => ({...oldSelection, ...o}));
+    const onSelect = (o: { duration?: number; loanRate?: number }) => {
+        setSelected(oldSelection => ({ ...oldSelection, ...o }));
     };
 
     return (
         <div>
-            <fieldset className="flex">
+            <fieldset className="flex" id={`${item.address}-${item.tokenId}-loanRate`}>
                 <legend>Select downpayment</legend>
 
-                {Array.from(loanRates).map((n) => (
+                {Array.from(loanRates).map(n => (
                     <div className="px-1" key={n}>
                         <input
                             type="radio"
-                            id={`${n}-loanRate`}
-                            name="loanRate"
+                            id={`${n}-${item.address}-${item.tokenId}-loanRate`}
+                            name={`${item.address}-${item.tokenId}-loanRate`}
                             value={n}
                             checked={selected.loanRate === n}
                             onChange={() => onSelect({ loanRate: n })}
+                            disabled={
+                                !options.some(
+                                    op => op.loanRate === n && op.term * op.totalNumberOfPayments === selected.duration
+                                )
+                            }
                         />
                         <label htmlFor={`${n}-loanRate`} className="px-1">
                             {100 - n / 100} %
@@ -50,18 +59,23 @@ export const Options = ({ options, onChange }: IProps) => {
                 ))}
             </fieldset>
 
-            <fieldset className="flex">
+            <fieldset className="flex" id={`${item.address}-${item.tokenId}-duration`}>
                 <legend>Select duration</legend>
 
-                {Array.from(durations).map((n) => (
+                {Array.from(durations).map(n => (
                     <div className="px-1" key={n}>
                         <input
                             type="radio"
-                            id={`${n}-duration`}
-                            name="duration"
+                            id={`${n}-${item.address}-${item.tokenId}-duration`}
+                            name={`${item.address}-${item.tokenId}-duration`}
                             value={n}
                             checked={selected.duration === n}
                             onChange={() => onSelect({ duration: n })}
+                            disabled={
+                                !options.some(
+                                    op => op.loanRate === selected.loanRate && op.term * op.totalNumberOfPayments === n
+                                )
+                            }
                         />
                         <label htmlFor={`${n}-duration`} className="px-2">
                             {n} sec.

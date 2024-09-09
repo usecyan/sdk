@@ -73,7 +73,7 @@ export class CyanSDK {
     /**
      * Performs the first step of pricing BNPLs and generating options from the response.
      * @param {string} currencyAddress The currency to use for BNPL.
-     * @param {Array<IItem | IItemWithPrice>} items An array of objects representing the items to price.
+     * @param {Array<IItem | IItemWithPrice >} items An array of objects representing the items to price.
      * @returns {Promise<ISdkPricerStep1['result']>} A Promise that resolves to an object containing the priced items and pricing options.
      */
     public async priceBnplsStep1(
@@ -82,13 +82,9 @@ export class CyanSDK {
     ): Promise<ISdkPricerStep1['result']> {
         const chain = await this._getChain();
         const response = await this.api.priceBnplsStep1({ chain, items, currencyAddress });
-        const options = generateBnplOptions(response);
+        const itemsWithOptions = generateBnplOptions(response, items);
         return {
-            items: items.map((item, i) => ({
-                ...item,
-                ...response.items[i],
-            })),
-            options,
+            items: itemsWithOptions,
         };
     }
 
@@ -115,13 +111,9 @@ export class CyanSDK {
         const chain = await this._getChain();
         const wallet = await this.signer.getAddress();
         const data = await this.api.pricePawnsStep1({ chain, items, currencyAddress, wallet });
-        const options = generatePawnOptions(data);
+        const itemsWithOptions = generatePawnOptions(data, items);
         return {
-            items: items.map((item, i) => ({
-                ...item,
-                ...data.items[i],
-            })),
-            options,
+            items: itemsWithOptions,
         };
     }
 
@@ -626,31 +618,36 @@ export class CyanSDK {
     }
 
     private async _buildStep2Request(args: ISdkPricerStep2['params']): Promise<IPricerStep2['request']> {
-        const { wallet, items, option, currencyAddress, autoRepayStatus } = args;
+        const { wallet, items, currencyAddress, autoRepayStatus } = args;
         const chain = await this._getChain();
-        return {
-            chain,
-            items: items.map(item => ({
+        const itemsWithOption: IPricerStep2['request']['items'] = items.map(item => {
+            return {
                 address: item.address,
                 tokenId: item.tokenId,
                 itemType: item.itemType,
                 amount: item.amount,
-            })),
+                isAutoLiquidated: item.isAutoLiquidated,
+                existingPlanId: item?.existingPlanId,
+                privateSaleId: item?.privateSaleId,
+                option: [item.option.term, item.option.totalNumberOfPayments, item.option.loanRate],
+            };
+        });
+        return {
+            chain,
+            items: itemsWithOption,
             currencyAddress,
-            option: [option.term, option.totalNumberOfPayments, option.loanRate],
             autoRepayStatus,
             wallet,
         };
     }
 
     private _buildStep2Result(args: ISdkPricerStep2['params'] & IPricerStep2['response']): ISdkPricerStep2['result'] {
-        const { items, option, autoRepayStatus, blockNumber, plans } = args;
-
-        return plans.map((plan, i) => {
+        const { items, autoRepayStatus, blockNumber, plans } = args;
+        const itemsWithPlanParams = plans.map((plan, i) => {
             if (!isNonErrored(plan)) {
                 return plan;
             }
-
+            const { option } = items[i];
             return {
                 item: {
                     amount: items[i].amount,
@@ -660,7 +657,9 @@ export class CyanSDK {
                     itemType: items[i].itemType,
                 },
                 plan: {
-                    amount: plan.price.mul(option.downpaymentRate + option.loanRate).div(100_00),
+                    amount: BigNumber.from(plan.price)
+                        .mul(option.downpaymentRate + option.loanRate)
+                        .div(100_00),
                     downPaymentPercent: option.downpaymentRate,
                     interestRate: plan.interestRate,
                     serviceFeeRate: option.serviceFeeRate,
@@ -676,6 +675,7 @@ export class CyanSDK {
                 marketName: plan.marketName,
             };
         });
+        return itemsWithPlanParams;
     }
 
     private async _getChain(): Promise<IChain> {

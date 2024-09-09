@@ -59,40 +59,41 @@ export class CyanAPI {
      * Calls BNPL pricer step 1
      */
     public async priceBnplsStep1(body: IPricerStep1['request']): Promise<IPricerStep1['response']> {
-        return await this._pricerStep1('/v2/pricer/bnpl-step1', body);
+        return await this._pricerStep1('/v2/pricer/bnpl-step1-v2', body);
     }
 
     /**
      * Calls BNPL pricer step 2
      */
     public async priceBnplsStep2(body: IPricerStep2['request']): Promise<IPricerStep2['response']> {
-        return await this._pricerStep2('/v2/pricer/bnpl-step2', body);
+        return await this._pricerStep2('/v2/pricer/bnpl-step2-v2', body);
     }
 
     /**
      * Calls Pawn pricer step 1
      */
     public async pricePawnsStep1(body: IPricerStep1['request']): Promise<IPricerStep1['response']> {
-        return await this._pricerStep1('/v2/pricer/pawn-step1', body);
+        return await this._pricerStep1('/v2/pricer/pawn-step1-v2', body);
     }
 
     /**
      * Calls Pawn pricer step 2
      */
     public async pricePawnsStep2(body: IPricerStep2['request']): Promise<IPricerStep2['response']> {
-        return await this._pricerStep2('/v2/pricer/pawn-step2', body);
+        return await this._pricerStep2('/v2/pricer/pawn-step2-v2', body);
     }
 
     private async _pricerStep1(url: string, body: IPricerStep1['request']): Promise<IPricerStep1['response']> {
         const { items, ...response } = await this.fetchData(url, {
             method: 'POST',
-            body: JSON.stringify({ ...body, source: 'sdk' }),
+            body: JSON.stringify({ ...body }),
         });
         return {
             ...response,
-            items: items.map((item: { price: string; interestRate: number }) => ({
+            items: items.map((item: { price: string; interestRate: number; config: number[] }) => ({
                 interestRate: item.interestRate,
                 price: BigNumber.from(item.price),
+                config: item.config,
             })),
         };
     }
