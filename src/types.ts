@@ -47,6 +47,8 @@ export enum AutoRepayStatus {
     FromMainWallet = 2,
 }
 
+export type IPricerMethod = number[];
+
 export type ICurrency = {
     symbol: string;
     address: string;
@@ -161,32 +163,46 @@ export type IItem = {
     tokenId: string;
     itemType: ItemType;
     amount: number;
+    isAutoLiquidated: boolean;
+    existingPlanId?: number;
+    privateSaleId?: number;
 };
 export type IItemWithPrice = IItem & {
-    price: BigNumber;
+    price: {
+        amount: BigNumber;
+        currency: string;
+    };
 };
 export type IPricerStep1 = {
     request: {
         wallet?: string;
         chain: IChain;
         currencyAddress: string;
-        items: IItem[];
+        items: Array<
+            IItem & {
+                price?: IItemWithPrice['price'];
+            }
+        >;
     };
     response: {
         items: {
+            vaultId: number;
             interestRate: number;
-            price: BigNumber;
+            price: string;
+            config: IPricerMethod[];
         }[];
-        config: number[][];
     };
 };
 
 export type IPricerStep2 = {
     request: {
+        items: Array<
+            IItem & {
+                option: number[];
+            }
+        >;
         chain: IChain;
-        items: IItem[];
         currencyAddress: string;
-        option: number[];
         autoRepayStatus: AutoRepayStatus;
         wallet: string;
     };
@@ -194,10 +210,10 @@ export type IPricerStep2 = {
         plans: Errored<{
             planId: number;
             signature: string;
+            price: string;
             interestRate: number;
-            price: BigNumber;
             vaultAddress: string;
-            marketName: string;
+            marketName?: string;
         }>[];
         blockNumber: number;
     };
@@ -205,20 +221,18 @@ export type IPricerStep2 = {
 
 export type ISdkPricerStep1 = {
     result: {
-        items: (IItemWithPrice & { interestRate: number })[];
-        options: IOption[];
+        items: Array<IItem & { price: BigNumber; interestRate: number; options: IOption[] }>;
     };
 };
 
 export type ISdkPricerStep2 = {
     params: {
         wallet: string;
-        items: IItemWithPrice[];
-        option: IOption;
+        items: Array<IItem & { price: BigNumber; option: IOption; existingPlanId?: number; privateSaleId?: number }>;
         currencyAddress: string;
         autoRepayStatus: AutoRepayStatus;
     };
-    result: Errored<ICreatePlanParams & { isChanged: boolean; marketName: string }>[];
+    result: Errored<ICreatePlanParams & { isChanged: boolean; marketName?: string }>[];
 };
 
 export type IOffer = {

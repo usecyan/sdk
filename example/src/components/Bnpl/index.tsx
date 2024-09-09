@@ -10,21 +10,28 @@ import { ItemForm } from '../ItemForm';
 type IItem = {
     address: string;
     tokenId: string;
+    isAutoLiquidated: boolean;
 };
 
 type IProps = { provider: ethers.providers.Web3Provider; cyan: Cyan; chain: IChain };
 export const CreateBNPL = React.memo(({ provider, cyan }: IProps) => {
-    const [currencyAddress, setCurrencyAddress] = useState<string>('');
+    const [currencyAddress, setCurrencyAddress] = useState<string>(ethers.constants.AddressZero);
     const [items, setItems] = useState<IItem[]>([]);
 
-    const [selectedOption, setSelectedOption] = useState<IOption>(null);
+    const [itemsWithSelectedOptions, setItemsWithSelectedOptions] = useState<
+        Array<
+            ISdkPricerStep1['result']['items'][0] & {
+                option: IOption;
+            }
+        >
+    >([]);
     const [pricerStep1Data, setPricerStep1Data] = useState<ISdkPricerStep1['result']>(null);
     const [pricerStep2Data, setPricerStep2Data] = useState<ISdkPricerStep2['result']>(null);
 
     const [loading, setLoading] = useState(false);
 
-    const onAddItem = (address: string, tokenId: string) => {
-        setItems([...items, { address, tokenId }]);
+    const onAddItem = (address: string, tokenId: string, isAutoLiquidated: boolean) => {
+        setItems([...items, { address, tokenId, isAutoLiquidated }]);
     };
 
     const pricerStep1 = async () => {
@@ -32,13 +39,15 @@ export const CreateBNPL = React.memo(({ provider, cyan }: IProps) => {
         try {
             const result = await cyan.priceBnplsStep1(
                 ethers.constants.AddressZero,
-                items.map(({ address, tokenId }) => ({
+                items.map(({ address, tokenId, isAutoLiquidated }) => ({
                     address,
                     tokenId,
+                    isAutoLiquidated,
                     amount: 0,
                     itemType: ItemType.ERC721,
                 }))
             );
+            setItemsWithSelectedOptions(result.items.map(item => ({ ...item, option: item.options?.[0] })));
             setPricerStep1Data(result);
         } catch (e) {
             alert(e.message);
@@ -51,10 +60,12 @@ export const CreateBNPL = React.memo(({ provider, cyan }: IProps) => {
         setLoading(true);
         try {
             const result = await cyan.priceBnplsStep2({
-                option: selectedOption,
-                items: pricerStep1Data.items,
+                items: itemsWithSelectedOptions.map(({ options, ...item }) => ({
+                    ...item,
+                    option: item.option,
+                })),
                 autoRepayStatus: 0,
-                currencyAddress,
+                currencyAddress: currencyAddress,
                 wallet,
             });
             setPricerStep2Data(result);
@@ -84,7 +95,17 @@ export const CreateBNPL = React.memo(({ provider, cyan }: IProps) => {
         }
         setLoading(false);
     };
-
+    const setSelectedOptionForItem = (_item: ISdkPricerStep1['result']['items'][0], option: IOption) => {
+        setItemsWithSelectedOptions([
+            ...itemsWithSelectedOptions.filter(
+                item => item.address !== _item.address || item.tokenId !== _item.tokenId
+            ),
+            {
+                ..._item,
+                option,
+            },
+        ]);
+    };
     return (
         <form className="block p-6 rounded-lg shadow-lg border border-2 border-black bg-white">
             <h4 className="text-xl mb-3">Create BNPL</h4>
@@ -93,25 +114,59 @@ export const CreateBNPL = React.memo(({ provider, cyan }: IProps) => {
                     value={currencyAddress}
                     className="input flex-1 mx-2 mb-1"
                     placeholder="Currency address"
-                    onChange={(e) => setCurrencyAddress(e.target.value)}
+                    onChange={e => setCurrencyAddress(e.target.value)}
                     required
                 />
-                {items.map((item) => {
+                {items.map(item => {
                     return (
                         <div key={`${item.address}:${item.tokenId}`} className="border border-black p-1 mb-1">
                             <div>Collection address: {item.address}</div>
                             <div>Token ID: {item.tokenId}</div>
+                            <div>Auto liquidate: {item.isAutoLiquidated ? 'Yes' : 'No'}</div>
                         </div>
                     );
                 })}
                 <ItemForm onAddItem={onAddItem} />
             </div>
-            {pricerStep1Data && <Options options={pricerStep1Data.options} onChange={setSelectedOption} />}
-            {pricerStep2Data && (
-                <div className="bg-slate-300 p-1 border border-black">
-                    <b>Pricer Step 2 Result:</b>
-                    {pricerStep2Data.filter(utils.isNonErrored).map((paymentPlan) => (
-                        <div key={paymentPlan.planId}>
+            {pricerStep1Data &&
+                pricerStep1Data.items.map((item, i) => {
+                    return (
+                        <div key={`${item.address}:${item.tokenId}`} className="border border-black p-1 mb-1">
+                            <div>Collection address: {item.address}</div>
+                            <div>Token ID: {item.tokenId}</div>
+                            {item.options?.length ? (
+                                <Options
+                                    key={`${item.address}:${item.tokenId}`}
+                                    value={
+                                        itemsWithSelectedOptions[i]?.option
+                                            ? {
+                                                  loanRate: itemsWithSelectedOptions[i].option.loanRate,
+                                                  duration:
+                                                      itemsWithSelectedOptions[i].option.term *
+                                                      itemsWithSelectedOptions[i].option.totalNumberOfPayments,
+                                              }
+                                            : undefined
+                                    }
+                                    item={{
+                                        address: item.address,
+                                        tokenId: item.tokenId,
+                                    }}
+                                    options={item.options}
+                                    onChange={(option: IOption) => setSelectedOptionForItem(item, option)}
+                                />
+                            ) : (
+                                <div>
+                                    <b>No loan options available</b>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}{' '}
+            {pricerStep2Data &&
+                pricerStep2Data.filter(utils.isNonErrored).map(paymentPlan => (
+                    <div className="bg-slate-300 p-1 border border-black" key={paymentPlan.planId}>
+                        <b>Pricer Step 2 Result:</b>
+                        <div>
                             <p>Plan ID: {paymentPlan.planId}</p>
                             <p>Interest Rate: {paymentPlan.plan.interestRate / 100}%</p>
                             <p>Priced Market: {paymentPlan.marketName}</p>
@@ -121,15 +176,14 @@ export const CreateBNPL = React.memo(({ provider, cyan }: IProps) => {
                             <p>Block number: {paymentPlan.blockNum}</p>
                             <p>Signature: {paymentPlan.signature}</p>
                         </div>
-                    ))}
-                </div>
-            )}
+                    </div>
+                ))}
             {loading ? (
                 <Loading />
             ) : (
                 <>
                     <Button onClick={pricerStep1}>Pricer Step 1</Button>
-                    <Button onClick={pricerStep2} disabled={!pricerStep1Data}>
+                    <Button onClick={pricerStep2} disabled={itemsWithSelectedOptions.length === 0}>
                         Pricer Step 2
                     </Button>
                     <Button onClick={handleAcceptance} disabled={!pricerStep2Data}>
